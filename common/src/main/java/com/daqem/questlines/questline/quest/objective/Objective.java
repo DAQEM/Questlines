@@ -5,10 +5,7 @@ import com.daqem.arc.api.action.holder.IActionHolder;
 import com.daqem.arc.api.action.holder.type.IActionHolderType;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
+import com.google.gson.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -53,6 +50,19 @@ public class Objective implements IActionHolder {
     public static class Serializer implements ISerializer<Objective> {
 
         @Override
+        public Objective deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+            JsonObject jsonObject = jsonElement.getAsJsonObject();
+            String location = jsonObject.get("location").getAsString();
+            String id = jsonObject.get("id").getAsString();
+            int goal = jsonObject.get("goal").getAsInt();
+
+            return new Objective(
+                    new ResourceLocation(location + "/" + id),
+                    goal
+            );
+        }
+
+        @Override
         public Objective fromNetwork(FriendlyByteBuf friendlyByteBuf) {
             return null;
         }
@@ -69,16 +79,6 @@ public class Objective implements IActionHolder {
 
         @Override
         public CompoundTag toNBT(Objective type) {
-            return null;
-        }
-
-        @Override
-        public Objective deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-            return null;
-        }
-
-        @Override
-        public JsonElement serialize(Objective objective, Type type, JsonSerializationContext jsonSerializationContext) {
             return null;
         }
     }

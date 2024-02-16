@@ -17,7 +17,7 @@ public class QuestlinesConfig {
         IConfigBuilder config = ConfigBuilders.newTomlConfig(Questlines.MOD_ID,null, false);
 
         config.push("debug");
-        isDebug = config.comment("Enable debug mode").define("isDebug", false);
+        isDebug = config.comment("Enable debug mode").define("is_debug", false);
         config.pop();
 
         config.build();

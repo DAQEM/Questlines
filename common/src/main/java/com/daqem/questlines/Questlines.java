@@ -4,6 +4,8 @@ import com.daqem.questlines.config.QuestlinesConfig;
 import com.daqem.questlines.data.QuestManager;
 import com.daqem.questlines.data.QuestlineManager;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
+import com.daqem.questlines.integration.arc.reward.QuestlinesRewardSerializer;
+import com.daqem.questlines.integration.arc.reward.QuestlinesRewardType;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
@@ -22,6 +24,8 @@ public abstract class Questlines {
 
         QuestlinesConfig.init();
         QuestlinesActionHolderType.init();
+        QuestlinesRewardSerializer.init();
+        QuestlinesRewardType.init();
     }
 
     public static void init() {

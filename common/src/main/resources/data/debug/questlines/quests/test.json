@@ -1,0 +1,24 @@
+{
+  "questline": "debug:test",
+  "objectives": [
+    {
+      "id": "test",
+      "goal": 1
+    },
+    {
+      "id": "test2",
+      "goal": 2
+    },
+    {
+      "id": "test3",
+      "goal": 3
+    }
+  ],
+  "rewards": [
+    {
+      "type": "arc:item",
+      "item": "minecraft:stone",
+      "amount": 1
+    }
+  ]
+}

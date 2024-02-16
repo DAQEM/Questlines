@@ -2,36 +2,44 @@ package com.daqem.questlines.questline;
 
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.questline.quest.Quest;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
+import com.google.gson.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
 
 public class Questline {
 
     private final ResourceLocation location;
-    private final Quest startQuest;
+    private @Nullable Quest startQuest;
 
-    public Questline(ResourceLocation location, Quest startQuest) {
+    private final boolean isUnlockedByDefault;
+
+    public Questline(ResourceLocation location, boolean isUnlockedByDefault) {
         this.location = location;
+        this.isUnlockedByDefault = isUnlockedByDefault;
+    }
+
+    public ResourceLocation getLocation() {
+        return location;
+    }
+
+    public void setStartQuest(@Nullable Quest startQuest) {
         this.startQuest = startQuest;
     }
 
     public static class Serializer implements ISerializer<Questline> {
 
         @Override
-        public JsonElement serialize(Questline questline, Type type, JsonSerializationContext jsonSerializationContext) {
-            return null;
-        }
-
-        @Override
         public Questline deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-            return null;
+            JsonObject jsonObject = jsonElement.getAsJsonObject();
+            return new Questline(
+                    getResourceLocation(jsonObject, "location"),
+                    GsonHelper.getAsBoolean(jsonObject, "isUnlockedByDefault", true)
+            );
         }
 
         @Override
