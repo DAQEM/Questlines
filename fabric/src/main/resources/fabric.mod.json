@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "questlines",
+  "version": "${version}",
+  "name": "Questlines",
+  "description": "Adds data-driven quest lines to the game.",
+  "authors": [
+    "DAQEM"
+  ],
+  "contact": {
+    "homepage": "https://daqem.com/",
+    "sources": "https://github.com/DAQEM/Questlines"
+  },
+  "license": "Apache-2.0",
+  "icon": "assets/questlines/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.daqem.questlines.fabric.QuestlinesFabric"
+    ]
+  },
+  "mixins": [
+    "questlines.mixins.json",
+    "questlines-common.mixins.json"
+  ],
+  "depends": {
+    "fabric": "*",
+    "minecraft": ">=${minecraft_version}",
+    "architectury": ">=${architectury_version}",
+    "supermartijn642configlib": ">=${config_library_version}",
+    "arc": ">=${arc_version}",
+    "uilib": ">=${ui_library_version}"
+  }
+}

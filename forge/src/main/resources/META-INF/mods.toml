@@ -1,0 +1,56 @@
+modLoader = "javafml"
+loaderVersion = "[${forge_loader_version},)"
+issueTrackerURL = "https://github.com/DAQEM/Questlines/issues"
+license = "Apache-2.0"
+
+[[mods]]
+modId = "questlines"
+version = "${version}"
+displayName = "Questlines"
+authors = "DAQEM"
+description = '''
+Adds data-driven quest lines to the game.
+'''
+#logoFile = ""
+
+[[dependencies.questlines]]
+modId = "forge"
+mandatory = true
+versionRange = "[${forge_loader_version},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.questlines]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[${minecraft_version},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.questlines]]
+modId = "architectury"
+mandatory = true
+versionRange = "[${architectury_version},)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.questlines]]
+modId = "supermartijn642configlib"
+mandatory = true
+versionRange = "[${config_library_version},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.questlines]]
+modId = "arc"
+mandatory = true
+versionRange = "[${arc_version},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.questlines]]
+modId = "uilib"
+mandatory = true
+versionRange = "[${ui_library_version},)"
+ordering = "NONE"
+side = "CLIENT"
