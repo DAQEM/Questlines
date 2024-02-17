@@ -70,4 +70,29 @@ public class QuestlineManager extends SimpleJsonResourceReloadListener {
             }
         }
     }
+
+    public List<Questline> getQuestlines() {
+        return new ArrayList<>(questlines.values());
+    }
+
+    public List<Questline> getStartQuestlines() {
+        return questlines.values().stream()
+                .filter(Questline::isUnlockedByDefault)
+                .toList();
+    }
+
+    public Questline getQuestline(ResourceLocation location) {
+        return questlines.get(location);
+    }
+
+    public List<Quest> getAllQuests() {
+        List<Quest> quests = new ArrayList<>();
+        for (Questline questline : questlines.values()) {
+            List<Quest> questlineQuests = questline.getAllQuests();
+            if (questlineQuests != null) {
+                quests.addAll(questlineQuests);
+            }
+        }
+        return quests;
+    }
 }

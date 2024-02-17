@@ -4,6 +4,7 @@ import com.daqem.arc.data.serializer.ArcSerializer;
 import com.google.gson.JsonDeserializer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 
 public interface ISerializer<T> extends JsonDeserializer<T>, ArcSerializer {
 
@@ -11,7 +12,7 @@ public interface ISerializer<T> extends JsonDeserializer<T>, ArcSerializer {
 
     void toNetwork(FriendlyByteBuf friendlyByteBuf, T type);
 
-    T fromNBT(CompoundTag compoundTag);
+    T fromNBT(CompoundTag compoundTag, ResourceLocation location);
 
     CompoundTag toNBT(T type);
 }

@@ -3,6 +3,7 @@ package com.daqem.questlines.questline.quest.objective;
 import com.daqem.arc.api.action.IAction;
 import com.daqem.arc.api.action.holder.IActionHolder;
 import com.daqem.arc.api.action.holder.type.IActionHolderType;
+import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
 import com.google.gson.*;
@@ -15,7 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Objective implements IActionHolder {
+public class Objective implements IActionHolder, ISerializable<Objective> {
 
     private final Map<ResourceLocation, IAction> actions = new HashMap<>();
 
@@ -47,6 +48,11 @@ public class Objective implements IActionHolder {
         return QuestlinesActionHolderType.OBJECTIVE;
     }
 
+    @Override
+    public ISerializer<Objective> getSerializer() {
+        return new Serializer();
+    }
+
     public static class Serializer implements ISerializer<Objective> {
 
         @Override
@@ -73,7 +79,7 @@ public class Objective implements IActionHolder {
         }
 
         @Override
-        public Objective fromNBT(CompoundTag compoundTag) {
+        public Objective fromNBT(CompoundTag compoundTag, ResourceLocation location) {
             return null;
         }
 

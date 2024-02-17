@@ -135,7 +135,7 @@ public class Quest {
         }
 
         @Override
-        public Quest fromNBT(CompoundTag compoundTag) {
+        public Quest fromNBT(CompoundTag compoundTag, ResourceLocation location) {
             return null;
         }
 

@@ -3,6 +3,7 @@ package com.daqem.questlines;
 import com.daqem.questlines.config.QuestlinesConfig;
 import com.daqem.questlines.data.QuestManager;
 import com.daqem.questlines.data.QuestlineManager;
+import com.daqem.questlines.event.PlayerJoinEvent;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
 import com.daqem.questlines.integration.arc.reward.QuestlinesRewardSerializer;
 import com.daqem.questlines.integration.arc.reward.QuestlinesRewardType;
@@ -21,14 +22,20 @@ public abstract class Questlines {
             throw new IllegalStateException("Questlines has already been initialized");
         }
         instance = this;
+    }
+
+    public static void init() {
 
         QuestlinesConfig.init();
         QuestlinesActionHolderType.init();
         QuestlinesRewardSerializer.init();
         QuestlinesRewardType.init();
+
+        registerEvents();
     }
 
-    public static void init() {
+    private static void registerEvents() {
+        PlayerJoinEvent.registerEvent();
     }
 
     public static Questlines getInstance() {
