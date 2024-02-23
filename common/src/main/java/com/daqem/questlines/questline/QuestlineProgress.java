@@ -5,6 +5,7 @@ import com.daqem.questlines.Questlines;
 import com.daqem.questlines.data.QuestManager;
 import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
+import com.daqem.questlines.questline.quest.Quest;
 import com.daqem.questlines.questline.quest.QuestProgress;
 import com.daqem.questlines.questline.quest.objective.ObjectiveProgress;
 import com.daqem.uilib.api.client.gui.component.advancement.IAdvancement;
@@ -38,6 +39,18 @@ public class QuestlineProgress implements ISerializable<QuestlineProgress>, IAdv
     public QuestlineProgress(Questline questline, @Nullable QuestProgress startQuestProgress) {
         this.questline = questline;
         this.startQuestProgress = startQuestProgress;
+    }
+
+    public static Optional<QuestlineProgress> findQuestlineProgress(List<QuestlineProgress> questlines1201$questlines, QuestProgress questProgress) {
+        return questlines1201$questlines.stream()
+                .filter(questlineProgress -> questlineProgress.getAllQuestProgresses().contains(questProgress))
+                .findFirst();
+    }
+
+    public static List<Quest> findQuestsForParent(QuestlineProgress questlineProgress, QuestProgress questProgress) {
+        return questlineProgress.getQuestline().getAllQuests().stream()
+                .filter(quest -> quest.getParent().isPresent() && quest.getParent().get().equals(questProgress.getQuest()))
+                .toList();
     }
 
     public Questline getQuestline() {

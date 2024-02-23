@@ -5,15 +5,18 @@ import com.daqem.arc.api.action.holder.IActionHolder;
 import com.daqem.arc.api.action.holder.type.IActionHolderType;
 import com.daqem.arc.api.action.serializer.IActionSerializer;
 import com.daqem.arc.api.reward.serializer.IRewardSerializer;
+import com.daqem.questlines.Questlines;
 import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
 import com.google.gson.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.lang.reflect.Type;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +60,11 @@ public class Objective implements IActionHolder, ISerializable<Objective> {
     @Override
     public ISerializer<Objective> getSerializer() {
         return new Serializer();
+    }
+
+    public Component getDescription(ObjectiveProgress progress) {
+        return Questlines.translatable("objective." + location.toString().replace(":", ".").replace("/", ".") + ".description")
+                .append(Questlines.translatable("objective.progress", progress.getProgress(), goal));
     }
 
     public static class Serializer implements ISerializer<Objective> {

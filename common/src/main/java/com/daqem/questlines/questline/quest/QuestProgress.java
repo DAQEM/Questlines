@@ -75,7 +75,7 @@ public class QuestProgress implements ISerializable<QuestProgress>, IAdvancement
 
     @Override
     public List<Component> getDescription() {
-        return quest.getDescription();
+        return quest.getDescription(this);
     }
 
     @Override

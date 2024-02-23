@@ -70,7 +70,7 @@ public class Questline implements ISerializable<Questline> {
     }
 
     public Component getName() {
-        return Questlines.translatable(location.toString().replace(":", ".").replace("/", "."));
+        return Questlines.translatable("questline." + location.toString().replace(":", ".").replace("/", "."));
     }
 
     public static class Serializer implements ISerializer<Questline> {

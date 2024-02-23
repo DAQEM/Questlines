@@ -1,5 +1,7 @@
 package com.daqem.questlines.mixin;
 
+import com.daqem.arc.api.action.data.ActionData;
+import com.daqem.arc.api.action.data.IActionData;
 import com.daqem.arc.api.action.holder.IActionHolder;
 import com.daqem.arc.api.player.ArcServerPlayer;
 import com.daqem.questlines.Questlines;
@@ -79,8 +81,8 @@ public abstract class MixinServerPlayer extends Player implements QuestlinesServ
 
     @Override
     public void questlines1_20_1$resetActionHolders() {
-            questlines1_20_1$removeActionHolders();
-            questlines1_20_1$addActionHolders();
+        questlines1_20_1$removeActionHolders();
+        questlines1_20_1$addActionHolders();
     }
 
     @Override
@@ -95,16 +97,16 @@ public abstract class MixinServerPlayer extends Player implements QuestlinesServ
     }
 
     @Override
-public void questlines1_20_1$addActionHolders() {
-    if (this instanceof ArcServerPlayer arcServerPlayer) {
-        questlines1_20_1$questlines.stream()
-                .flatMap(questline -> questline.getAllQuestProgresses().stream())
-                .flatMap(questProgress -> questProgress.getObjectives().stream())
-                .filter(objectiveProgress -> !objectiveProgress.isCompleted())
-                .map(ObjectiveProgress::getObjective)
-                .forEach(arcServerPlayer::arc$addActionHolder);
+    public void questlines1_20_1$addActionHolders() {
+        if (this instanceof ArcServerPlayer arcServerPlayer) {
+            questlines1_20_1$questlines.stream()
+                    .flatMap(questline -> questline.getAllQuestProgresses().stream())
+                    .flatMap(questProgress -> questProgress.getObjectives().stream())
+                    .filter(objectiveProgress -> !objectiveProgress.isCompleted())
+                    .map(ObjectiveProgress::getObjective)
+                    .forEach(arcServerPlayer::arc$addActionHolder);
+        }
     }
-}
 
     @Override
     public boolean questlines1_20_1$hasQuestline(Questline questline) {
@@ -130,18 +132,17 @@ public void questlines1_20_1$addActionHolders() {
     }
 
     @Override
-    public void questlines1_20_1$addObjectiveProgress(Objective objective, int amount) {
+    public void questlines1_20_1$addObjectiveProgress(Objective objective, int amount, ActionData actionData) {
         questlines1_20_1$getObjectiveProgress(objective).ifPresent(objectiveProgress -> {
             boolean hadCompleted = objectiveProgress.getProgress() == objective.getGoal();
             objectiveProgress.addProgress(amount);
             boolean hasCompleted = objectiveProgress.getProgress() == objective.getGoal();
             if (!hadCompleted && hasCompleted) {
                 questlines1_20_1$broadcastCompletionMessage();
-                QuestProgress questProgress = questlines1_20_1$findCompletedQuest();
-                if (questProgress != null) {
-                    questlines1_20_1$processCompletedQuest(questProgress);
-                }
+                questlines1_20_1$findCompletedQuest(objectiveProgress).ifPresent(progress ->
+                        questlines1_20_1$processCompletedQuest(progress, actionData));
             }
+            questlines1_20_1$resetActionHolders();
         });
     }
 
@@ -155,49 +156,32 @@ public void questlines1_20_1$addActionHolders() {
     }
 
     @Unique
-    private QuestProgress questlines1_20_1$findCompletedQuest() {
+    private Optional<QuestProgress> questlines1_20_1$findCompletedQuest(ObjectiveProgress objectiveProgress) {
         return questlines1_20_1$questlines.stream()
-                .map(QuestlineProgress::getAllQuestProgresses)
-                .flatMap(List::stream)
-                .filter(questProgress1 -> questProgress1.getObjectives().stream()
-                        .allMatch(ObjectiveProgress::isCompleted))
-                .findFirst()
-                .orElse(null);
+                .flatMap(questlineProgress -> questlineProgress.getAllQuestProgresses().stream())
+                .filter(questProgress1 -> questProgress1.getObjectives().contains(objectiveProgress))
+                .findFirst();
     }
 
     @Unique
-    private void questlines1_20_1$processCompletedQuest(QuestProgress questProgress) {
-        //check if all objectives are completed
-        boolean allCompleted = questProgress.getObjectives().stream()
-                .allMatch(ObjectiveProgress::isCompleted);
-
-        if (allCompleted) {
-            QuestlineProgress questlineProgress = questlines1_20_1$questlines.stream()
-                    .filter(questlineProgress1 -> questlineProgress1.getAllQuestProgresses().contains(questProgress))
-                    .findFirst()
-                    .orElse(null);
-
-            if (questlineProgress != null) {
-                List<Quest> nextQuests = questlineProgress.getQuestline().getAllQuests().stream()
-                        .filter(quest -> quest.getParent().isPresent() && quest.getParent().get().equals(questProgress.getQuest()))
-                        .toList();
-
-                nextQuests.forEach(quest -> {
-                    QuestProgress newQuestProgress = new QuestProgress(
-                            quest,
-                            quest.getObjectives().stream()
-                                    .map(objective1 -> new ObjectiveProgress(objective1, 0))
-                                    .toList()
-                    );
-
-                    questProgress.addChild(newQuestProgress);
-
-                    if (newQuestProgress.isCompleted()) {
-                        questlines1_20_1$processCompletedQuest(newQuestProgress);
-                    }
-                });
-            }
+    private void questlines1_20_1$processCompletedQuest(QuestProgress questProgress, ActionData actionData) {
+        if (!questProgress.isCompleted()) {
+            return;
         }
+
+        questProgress.getQuest().getRewards().forEach(reward -> reward.apply(actionData));
+
+        QuestlineProgress.findQuestlineProgress(questlines1_20_1$questlines, questProgress)
+                .ifPresent(questlineProgress -> {
+                    List<Quest> quests = QuestlineProgress.findQuestsForParent(questlineProgress, questProgress);
+                    quests.forEach(quest -> {
+                        QuestProgress newQuestProgress = quest.createQuestProgress();
+                        questProgress.addChild(newQuestProgress);
+                        if (newQuestProgress.isCompleted()) {
+                            questlines1_20_1$processCompletedQuest(newQuestProgress, actionData);
+                        }
+                    });
+                });
     }
 
     @Inject(at = @At("TAIL"), method = "restoreFrom(Lnet/minecraft/server/level/ServerPlayer;Z)V")

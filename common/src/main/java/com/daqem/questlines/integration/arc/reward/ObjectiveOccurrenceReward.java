@@ -40,7 +40,7 @@ public class ObjectiveOccurrenceReward extends AbstractReward {
         if (source instanceof Objective objective) {
             ArcPlayer player = actionData.getPlayer();
             if (player instanceof QuestlinesServerPlayer serverPlayer) {
-                serverPlayer.questlines1_20_1$addObjectiveProgress(objective, amount);
+                serverPlayer.questlines1_20_1$addObjectiveProgress(objective, amount, actionData);
             }
         }
         return new ActionResult();

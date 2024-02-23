@@ -1,5 +1,7 @@
 package com.daqem.questlines.player;
 
+import com.daqem.arc.api.action.data.ActionData;
+import com.daqem.arc.api.action.data.IActionData;
 import com.daqem.questlines.questline.Questline;
 import com.daqem.questlines.questline.QuestlineProgress;
 import com.daqem.questlines.questline.quest.objective.Objective;
@@ -17,7 +19,7 @@ public interface QuestlinesServerPlayer extends QuestlinesPlayer {
 
     void questlines1_20_1$addStartQuestlines(List<Questline> questlines);
     Optional<ObjectiveProgress> questlines1_20_1$getObjectiveProgress(Objective objective);
-    void questlines1_20_1$addObjectiveProgress(Objective objective, int amount);
+    void questlines1_20_1$addObjectiveProgress(Objective objective, int amount, ActionData actionData);
 
     void questlines1_20_1$resetActionHolders();
     void questlines1_20_1$removeActionHolders();

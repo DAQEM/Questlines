@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.lang.reflect.Type;
@@ -62,6 +63,10 @@ public class ObjectiveProgress implements ISerializable<ObjectiveProgress> {
 
     public boolean isCompleted() {
         return progress >= objective.getGoal();
+    }
+
+    public Component getDescription() {
+        return objective.getDescription(this);
     }
 
     public static class Serializer implements ISerializer<ObjectiveProgress> {

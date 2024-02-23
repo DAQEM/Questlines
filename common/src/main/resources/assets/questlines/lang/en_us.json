@@ -1,2 +1,13 @@
 {
+  "questlines.objective.progress": " (%s/%s)",
+  "questlines.questline.debug.test": "Test Questline",
+  "questlines.quest.debug.test": "Touch Grass",
+  "questlines.quest.debug.test.description": "Break a block of grass",
+  "questlines.objective.debug.test.test.description": "Break a block of grass",
+  "questlines.quest.debug.test_child": "Touch Dirt",
+  "questlines.quest.debug.test_child.description": "Break a block of dirt",
+  "questlines.objective.debug.test.test2.description": "Break a block of dirt",
+  "questlines.quest.debug.test_child_child": "Throw an Egg",
+  "questlines.quest.debug.test_child_child.description": "Throw an egg",
+  "questlines.objective.debug.test.test3.description": "Throw an egg"
 }

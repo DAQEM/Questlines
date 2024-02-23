@@ -11,6 +11,7 @@ import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
 import com.daqem.questlines.questline.Questline;
 import com.daqem.questlines.questline.quest.objective.Objective;
+import com.daqem.questlines.questline.quest.objective.ObjectiveProgress;
 import com.google.gson.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -79,11 +80,27 @@ public class Quest implements ISerializable<Quest> {
     }
 
     public Component getName() {
-        return Questlines.translatable(location.toString().replace(":", ".").replace("/", "."));
+        return Questlines.translatable("quest." + location.toString().replace(":", ".").replace("/", "."));
     }
 
-    public List<Component> getDescription() {
-        return List.of(Questlines.translatable(location.toString().replace(":", ".").replace("/", ".") + ".description"));
+    public List<Component> getDescription(QuestProgress progress) {
+        List<Component> description = new ArrayList<>(List.of(Questlines.translatable("quest." + location.toString().replace(":", ".").replace("/", ".") + ".description")));
+        if (!objectives.isEmpty()) {
+            description.add(Questlines.literal(" "));
+        }
+        progress.getObjectives().forEach(objective -> description.add(objective.getDescription()));
+
+        return description;
+    }
+
+    public List<ObjectiveProgress> createObjectiveProgresses() {
+        return objectives.values().stream()
+                .map(ObjectiveProgress::new)
+                .toList();
+    }
+
+    public QuestProgress createQuestProgress() {
+        return new QuestProgress(this, createObjectiveProgresses());
     }
 
     @Override
