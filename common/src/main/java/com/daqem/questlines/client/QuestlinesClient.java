@@ -8,7 +8,7 @@ import org.lwjgl.glfw.GLFW;
 public class QuestlinesClient {
 
     private static final String QUESTLINES_CATEGORY = "key.categories.questlines";
-    public static final KeyMapping OPEN_QUEST_SCREEN = new KeyMapping("key.challenges.open_quest_screen", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Q, QUESTLINES_CATEGORY);
+    public static final KeyMapping OPEN_QUEST_SCREEN = new KeyMapping("key.challenges.open_quest_screen", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, QUESTLINES_CATEGORY);
 
     public static void init() {
         registerEvents();

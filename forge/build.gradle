@@ -107,3 +107,48 @@ publishing {
         // Add repositories to publish to here.
     }
 }
+
+curseforge {
+    apiKey = System.getenv("CURSEFORGE_API_KEY")
+    project {
+        id = rootProject.curse_forge_project_id
+        releaseType = rootProject.release_type
+        changelogType = "markdown"
+        changelog = rootProject.file('changelog.md')
+        addGameVersion "$rootProject.minecraft_version"
+        addGameVersion "Java 17"
+        addGameVersion "Forge"
+
+        relations {
+            requiredDependency("architectury-api")
+            requiredDependency("supermartijn642s-config-lib")
+            requiredDependency("ui")
+            requiredDependency("arc")
+        }
+
+        mainArtifact(remapJar) {
+            displayName = "Questlines Forge $rootProject.minecraft_version - $rootProject.mod_version"
+        }
+
+        addArtifact(remapSourcesJar) {
+        }
+    }
+}
+
+modrinth {
+    token = System.getenv("MODRINTH_API_KEY")
+    projectId = rootProject.modrinth_project_id
+    versionName = "Questlines Forge $rootProject.minecraft_version - $rootProject.mod_version"
+    versionNumber = "$rootProject.mod_version"
+    versionType = "$rootProject.release_type"
+    uploadFile = remapJar
+    additionalFiles = [remapSourcesJar]
+    gameVersions = ["$rootProject.minecraft_version"]
+    loaders = ["forge"]
+    changelog = rootProject.file('changelog.md').text
+    dependencies {
+        required.project "architectury-api"
+        required.project "ui-lib"
+        required.project "arc"
+    }
+}
