@@ -2,25 +2,28 @@ package com.daqem.questlines.questline.quest;
 
 import com.daqem.arc.api.action.holder.ActionHolderManager;
 import com.daqem.arc.api.reward.IReward;
+import com.daqem.arc.api.reward.serializer.IRewardSerializer;
 import com.daqem.arc.registry.ArcRegistry;
+import com.daqem.questlines.Questlines;
 import com.daqem.questlines.data.QuestManager;
+import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
+import com.daqem.questlines.questline.Questline;
 import com.daqem.questlines.questline.quest.objective.Objective;
 import com.google.gson.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
-public class Quest {
+public class Quest implements ISerializable<Quest> {
 
     private final ResourceLocation location;
     private final ResourceLocation questlineLocation;
@@ -51,8 +54,8 @@ public class Quest {
         return parentLocation;
     }
 
-    public @Nullable Quest getParent() {
-        return parent;
+    public Optional<Quest> getParent() {
+        return Optional.ofNullable(parent);
     }
 
     public void setParent(@Nullable Quest parent) {
@@ -73,6 +76,19 @@ public class Quest {
 
     public List<IReward> getRewards() {
         return rewards;
+    }
+
+    public Component getName() {
+        return Questlines.translatable(location.toString().replace(":", ".").replace("/", "."));
+    }
+
+    public List<Component> getDescription() {
+        return List.of(Questlines.translatable(location.toString().replace(":", ".").replace("/", ".") + ".description"));
+    }
+
+    @Override
+    public ISerializer<Quest> getSerializer() {
+        return new Serializer();
     }
 
     public static class Serializer implements ISerializer<Quest> {
@@ -126,12 +142,27 @@ public class Quest {
 
         @Override
         public Quest fromNetwork(FriendlyByteBuf friendlyByteBuf) {
-            return null;
+            ResourceLocation location = friendlyByteBuf.readResourceLocation();
+            ResourceLocation questlineLocation = friendlyByteBuf.readResourceLocation();
+            ResourceLocation parentLocation = friendlyByteBuf.readBoolean() ? friendlyByteBuf.readResourceLocation() : null;
+            List<Objective> objectives = friendlyByteBuf.readList(new Objective.Serializer()::fromNetwork);
+            Map<ResourceLocation, Objective> objectivesMap = objectives.stream().collect(Collectors.toMap(Objective::getLocation, objective -> objective));
+            List<IReward> rewards = friendlyByteBuf.readList(IRewardSerializer::fromNetwork);
+            return new Quest(location, questlineLocation, parentLocation, objectivesMap, rewards);
         }
 
         @Override
         public void toNetwork(FriendlyByteBuf friendlyByteBuf, Quest type) {
-
+            friendlyByteBuf.writeResourceLocation(type.location);
+            friendlyByteBuf.writeResourceLocation(type.questlineLocation);
+            friendlyByteBuf.writeBoolean(type.parentLocation != null);
+            if (type.parentLocation != null) {
+                friendlyByteBuf.writeResourceLocation(type.parentLocation);
+            }
+            friendlyByteBuf.writeCollection(type.getObjectives(),
+                    (friendlyByteBuf1, objective) -> new Objective.Serializer().toNetwork(friendlyByteBuf1, objective));
+            friendlyByteBuf.writeCollection(type.getRewards(),
+                    (friendlyByteBuf1, reward) -> IRewardSerializer.toNetwork(reward, friendlyByteBuf1, reward.getType().getLocation()));
         }
 
         @Override

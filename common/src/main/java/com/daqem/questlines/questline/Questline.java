@@ -1,11 +1,13 @@
 package com.daqem.questlines.questline;
 
+import com.daqem.questlines.Questlines;
 import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.questline.quest.Quest;
 import com.google.gson.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import org.jetbrains.annotations.Nullable;
@@ -13,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class Questline implements ISerializable<Questline> {
 
@@ -30,8 +33,8 @@ public class Questline implements ISerializable<Questline> {
         return location;
     }
 
-    public @Nullable Quest getStartQuest() {
-        return startQuest;
+    public Optional<Quest> getStartQuest() {
+        return Optional.ofNullable(startQuest);
     }
 
     public void setStartQuest(@Nullable Quest startQuest) {
@@ -66,6 +69,10 @@ public class Questline implements ISerializable<Questline> {
         return new Serializer();
     }
 
+    public Component getName() {
+        return Questlines.translatable(location.toString().replace(":", ".").replace("/", "."));
+    }
+
     public static class Serializer implements ISerializer<Questline> {
 
         @Override
@@ -79,12 +86,16 @@ public class Questline implements ISerializable<Questline> {
 
         @Override
         public Questline fromNetwork(FriendlyByteBuf friendlyByteBuf) {
-            return null;
+            return new Questline(
+                    friendlyByteBuf.readResourceLocation(),
+                    friendlyByteBuf.readBoolean()
+            );
         }
 
         @Override
         public void toNetwork(FriendlyByteBuf friendlyByteBuf, Questline type) {
-
+            friendlyByteBuf.writeResourceLocation(type.getLocation());
+            friendlyByteBuf.writeBoolean(type.isUnlockedByDefault());
         }
 
         @Override

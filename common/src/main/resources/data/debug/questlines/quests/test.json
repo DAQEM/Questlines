@@ -7,11 +7,11 @@
     },
     {
       "id": "test2",
-      "goal": 2
+      "goal": 0
     },
     {
       "id": "test3",
-      "goal": 3
+      "goal": 0
     }
   ],
   "rewards": [

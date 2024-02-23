@@ -53,4 +53,4 @@ modId = "uilib"
 mandatory = true
 versionRange = "[${ui_library_version},)"
 ordering = "NONE"
-side = "CLIENT"
+side = "BOTH"

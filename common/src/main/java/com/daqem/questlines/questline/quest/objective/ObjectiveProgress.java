@@ -17,6 +17,10 @@ public class ObjectiveProgress implements ISerializable<ObjectiveProgress> {
     private final Objective objective;
     private int progress;
 
+    public ObjectiveProgress(Objective objective) {
+        this(objective, 0);
+    }
+
     public ObjectiveProgress(Objective objective, int progress) {
         this.objective = objective;
         this.progress = progress;
@@ -26,9 +30,38 @@ public class ObjectiveProgress implements ISerializable<ObjectiveProgress> {
         return objective;
     }
 
+    public int getProgress() {
+        return progress;
+    }
+
+    public void setProgress(int progress) {
+        if (this.progress < objective.getGoal()) {
+            this.progress = Math.min(progress, objective.getGoal());
+            if (this.progress == objective.getGoal()) {
+                Questlines.LOGGER.info("Objective " + objective.getLocation() + " completed!");
+            }
+        }
+
+        if (this.progress > objective.getGoal()) {
+            this.progress = objective.getGoal();
+        }
+
+        if (this.progress < 0) {
+            this.progress = 0;
+        }
+    }
+
+    public void addProgress(int progress) {
+        setProgress(getProgress() + progress);
+    }
+
     @Override
     public ISerializer<ObjectiveProgress> getSerializer() {
         return new Serializer();
+    }
+
+    public boolean isCompleted() {
+        return progress >= objective.getGoal();
     }
 
     public static class Serializer implements ISerializer<ObjectiveProgress> {
@@ -40,19 +73,22 @@ public class ObjectiveProgress implements ISerializable<ObjectiveProgress> {
 
         @Override
         public ObjectiveProgress fromNetwork(FriendlyByteBuf friendlyByteBuf) {
-            return null;
+            int progress = friendlyByteBuf.readInt();
+            Objective objective = Questlines.getInstance().getQuestManager().getObjective(friendlyByteBuf.readResourceLocation()).orElse(null);
+            return new ObjectiveProgress(objective, progress);
         }
 
         @Override
         public void toNetwork(FriendlyByteBuf friendlyByteBuf, ObjectiveProgress type) {
-
+            friendlyByteBuf.writeInt(type.getProgress());
+            friendlyByteBuf.writeResourceLocation(type.getObjective().getLocation());
         }
 
         private static final String PROGRESS = "Progress";
 
         @Override
         public ObjectiveProgress fromNBT(CompoundTag compoundTag, ResourceLocation location) {
-            Objective objective = Questlines.getInstance().getQuestManager().getObjective(location);
+            Objective objective = Questlines.getInstance().getQuestManager().getObjective(location).orElse(null);
             if (objective == null) {
                 return null;
             }

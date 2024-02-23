@@ -3,6 +3,8 @@ package com.daqem.questlines.questline.quest.objective;
 import com.daqem.arc.api.action.IAction;
 import com.daqem.arc.api.action.holder.IActionHolder;
 import com.daqem.arc.api.action.holder.type.IActionHolderType;
+import com.daqem.arc.api.action.serializer.IActionSerializer;
+import com.daqem.arc.api.reward.serializer.IRewardSerializer;
 import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
@@ -31,6 +33,10 @@ public class Objective implements IActionHolder, ISerializable<Objective> {
     @Override
     public ResourceLocation getLocation() {
         return location;
+    }
+
+    public int getGoal() {
+        return goal;
     }
 
     @Override
@@ -70,12 +76,25 @@ public class Objective implements IActionHolder, ISerializable<Objective> {
 
         @Override
         public Objective fromNetwork(FriendlyByteBuf friendlyByteBuf) {
-            return null;
+            ResourceLocation location = friendlyByteBuf.readResourceLocation();
+            int goal = friendlyByteBuf.readInt();
+            List<IAction> actions = friendlyByteBuf.readList(IActionSerializer::fromNetwork);
+
+            Objective objective = new Objective(location, goal);
+
+            for (IAction action : actions) {
+                objective.addAction(action);
+            }
+
+            return objective;
         }
 
         @Override
         public void toNetwork(FriendlyByteBuf friendlyByteBuf, Objective type) {
-
+            friendlyByteBuf.writeResourceLocation(type.getLocation());
+            friendlyByteBuf.writeInt(type.getGoal());
+            friendlyByteBuf.writeCollection(type.getActions(),
+                    (friendlyByteBuf1, action) -> IActionSerializer.toNetwork(action, friendlyByteBuf1));
         }
 
         @Override

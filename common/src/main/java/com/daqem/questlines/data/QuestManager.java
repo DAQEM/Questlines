@@ -3,9 +3,11 @@ package com.daqem.questlines.data;
 import com.daqem.arc.api.action.holder.ActionHolderManager;
 import com.daqem.questlines.Questlines;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
+import com.daqem.questlines.questline.Questline;
 import com.daqem.questlines.questline.quest.Quest;
 import com.daqem.questlines.questline.quest.QuestProgress;
 import com.daqem.questlines.questline.quest.objective.Objective;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -17,9 +19,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class QuestManager extends SimpleJsonResourceReloadListener {
 
@@ -27,6 +27,7 @@ public class QuestManager extends SimpleJsonResourceReloadListener {
             .registerTypeHierarchyAdapter(Quest.class, new Quest.Serializer())
             .create();
     public static final Logger LOGGER = LogUtils.getLogger();
+    private ImmutableMap<ResourceLocation, Quest> quests = ImmutableMap.of();
 
     public QuestManager() {
         super(GSON, "questlines/quests");
@@ -35,7 +36,7 @@ public class QuestManager extends SimpleJsonResourceReloadListener {
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> object, ResourceManager resourceManager, ProfilerFiller profilerFiller) {
         ActionHolderManager.getInstance().clearActionHolders(QuestlinesActionHolderType.OBJECTIVE);
-        List<Quest> tempQuests = new ArrayList<>();
+        Map<ResourceLocation, Quest> tempQuests = new HashMap<>();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : object.entrySet()) {
             ResourceLocation location = entry.getKey();
@@ -46,7 +47,7 @@ public class QuestManager extends SimpleJsonResourceReloadListener {
             try {
                 Quest quest = GSON.fromJson(element, Quest.class);
                 if (quest != null) {
-                    tempQuests.add(quest);
+                    tempQuests.put(quest.getLocation(), quest);
                 } else {
                     LOGGER.error("Could not deserialize quest {}", location);
                 }
@@ -57,23 +58,56 @@ public class QuestManager extends SimpleJsonResourceReloadListener {
         }
 
         LOGGER.info("Loaded {} quests", tempQuests.size());
-        Questlines.getInstance().getQuestlineManager().applyQuests(sortQuests(tempQuests));
+        quests = ImmutableMap.copyOf(tempQuests);
+        Questlines.getInstance().getQuestlineManager().applyQuests(sortQuests(tempQuests.values().stream().toList()));
     }
 
-    public @Nullable Quest getQuest(ResourceLocation location) {
-        return Questlines.getInstance().getQuestlineManager().getAllQuests().stream()
-                .filter(quest -> quest.getLocation().equals(location))
-                .findFirst()
-                .orElse(null);
+    public Optional<Quest> getQuest(ResourceLocation location) {
+        return Optional.ofNullable(quests.get(location));
     }
 
-    public @Nullable Objective getObjective(ResourceLocation location) {
-        return Questlines.getInstance().getQuestlineManager().getAllQuests().stream()
+    public List<Quest> getQuests() {
+        return new ArrayList<>(quests.values());
+    }
+
+    public Optional<Quest> getStartQuestFor(Questline questline) {
+        return getSortedQuests().stream()
+                .filter(quest -> quest.getQuestlineLocation().equals(questline.getLocation()))
+                .findFirst();
+    }
+
+    public List<Quest> getSortedQuests() {
+        return sortQuests(new ArrayList<>(quests.values()));
+    }
+
+    public Optional<Objective> getObjective(ResourceLocation location) {
+        return quests.values().stream()
                 .map(Quest::getObjectives)
                 .flatMap(List::stream)
                 .filter(objective -> objective.getLocation().equals(location))
-                .findFirst()
-                .orElse(null);
+                .findFirst();
+    }
+
+    public void replaceQuests(List<Quest> quests) {
+        ImmutableMap.Builder<ResourceLocation, Quest> map = ImmutableMap.builder();
+        for (Quest quest : quests) {
+            map.put(quest.getLocation(), quest);
+        }
+        this.quests = map.build();
+        LOGGER.info("Updated {} quests", this.quests.size());
+    }
+
+    public List<String> getLocationStrings() {
+        return quests.keySet().stream().map(ResourceLocation::toString).toList();
+    }
+
+    public List<String> getObjectiveLocationStrings() {
+        return quests.values().stream()
+                .map(Quest::getObjectives)
+                .flatMap(List::stream)
+                .map(Objective::getLocation)
+                .map(ResourceLocation::toString)
+                .toList();
     }
 
     public static List<Quest> sortQuests(List<Quest> quests) {
@@ -88,7 +122,7 @@ public class QuestManager extends SimpleJsonResourceReloadListener {
         }
 
         return quests.stream()
-                .filter(quest -> quest.getParent() == null)
+                .filter(quest -> quest.getParent().isEmpty())
                 .toList();
     }
 
@@ -104,7 +138,7 @@ public class QuestManager extends SimpleJsonResourceReloadListener {
         }
 
         return quests.stream()
-                .filter(quest -> quest.getParent() == null)
+                .filter(quest -> quest.getQuestParent().isEmpty())
                 .toList();
     }
 }

@@ -1,8 +1,13 @@
 package com.daqem.questlines.data;
 
+import com.daqem.arc.Arc;
+import com.daqem.arc.api.action.IAction;
+import com.daqem.arc.api.action.type.IActionType;
+import com.daqem.questlines.Questlines;
 import com.daqem.questlines.questline.Questline;
 import com.daqem.questlines.questline.quest.Quest;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -13,10 +18,7 @@ import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class QuestlineManager extends SimpleJsonResourceReloadListener {
 
@@ -81,11 +83,11 @@ public class QuestlineManager extends SimpleJsonResourceReloadListener {
                 .toList();
     }
 
-    public Questline getQuestline(ResourceLocation location) {
-        return questlines.get(location);
+    public Optional<Questline> getQuestline(ResourceLocation location) {
+        return Optional.ofNullable(questlines.get(location));
     }
 
-    public List<Quest> getAllQuests() {
+    public List<Quest> getQuests() {
         List<Quest> quests = new ArrayList<>();
         for (Questline questline : questlines.values()) {
             List<Quest> questlineQuests = questline.getAllQuests();
@@ -94,5 +96,20 @@ public class QuestlineManager extends SimpleJsonResourceReloadListener {
             }
         }
         return quests;
+    }
+
+    public void replaceQuestlines(List<Questline> questlines) {
+        ImmutableMap.Builder<ResourceLocation, Questline> map = ImmutableMap.builder();
+        for (Questline questline : questlines) {
+            Questlines.getInstance().getQuestManager().getStartQuestFor(questline)
+                    .ifPresent(questline::setStartQuest);
+            map.put(questline.getLocation(), questline);
+        }
+        this.questlines = map.build();
+        LOGGER.info("Updated {} questlines", this.questlines.size());
+    }
+
+    public List<String> getLocationStrings() {
+        return questlines.keySet().stream().map(ResourceLocation::toString).toList();
     }
 }

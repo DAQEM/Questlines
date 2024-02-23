@@ -1,7 +1,7 @@
 {
   "holder": {
-    "type": "arc:player",
-    "id": "arc:player"
+    "type": "questlines:objective",
+    "id": "debug:test/test"
   },
   "type": "arc:on_break_block",
   "conditions": [
