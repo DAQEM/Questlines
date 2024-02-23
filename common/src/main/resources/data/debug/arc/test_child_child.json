@@ -1,0 +1,18 @@
+{
+  "holder": {
+    "type": "questlines:objective",
+    "id": "debug:test/test3"
+  },
+  "type": "arc:on_throw_item",
+  "conditions": [
+    {
+      "type": "arc:item",
+      "item": "minecraft:egg"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "questlines:objective_occurrence"
+    }
+  ]
+}

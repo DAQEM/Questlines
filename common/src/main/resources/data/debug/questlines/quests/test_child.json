@@ -1,0 +1,10 @@
+{
+  "questline": "debug:test",
+  "parent": "debug:test",
+  "objectives": [
+    {
+      "id": "test",
+      "goal": 3
+    }
+  ]
+}

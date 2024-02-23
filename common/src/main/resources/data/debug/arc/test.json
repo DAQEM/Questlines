@@ -1,0 +1,18 @@
+{
+  "holder": {
+    "type": "questlines:objective",
+    "id": "debug:test/test"
+  },
+  "type": "arc:on_break_block",
+  "conditions": [
+    {
+      "type": "arc:block",
+      "block": "minecraft:grass_block"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "questlines:objective_occurrence"
+    }
+  ]
+}

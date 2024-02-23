@@ -17,6 +17,9 @@
   "entrypoints": {
     "main": [
       "com.daqem.questlines.fabric.QuestlinesFabric"
+    ],
+    "client": [
+      "com.daqem.questlines.fabric.QuestlinesFabricClient"
     ]
   },
   "mixins": [
