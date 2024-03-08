@@ -147,10 +147,10 @@ public abstract class MixinServerPlayer extends Player implements QuestlinesServ
     }
 
     @Unique
-    private void questlines1_20_1$broadcastCompletionMessage() {
+    private void questlines1_20_1$broadcastCompletionMessage(ObjectiveProgress objectiveProgress) {
         questlines1_20_1$getServer().ifPresent(server -> {
             server.getPlayerList().broadcastSystemMessage(
-                    Questlines.literal("HIEP HIEP HOERA"), false
+                    Questlines.literal("You completed the objective: " +  objectiveProgress.getObjective().getDescription(objectiveProgress).getString()), false
             );
         });
     }
