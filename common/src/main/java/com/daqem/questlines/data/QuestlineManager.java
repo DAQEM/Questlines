@@ -39,7 +39,7 @@ public class QuestlineManager extends SimpleJsonResourceReloadListener {
         Map<ResourceLocation, Questline> tempQuestlines = new HashMap<>();
 
         if (!QuestlinesConfig.isDebug.get()) {
-            object.entrySet().removeIf(entry -> !entry.getKey().getNamespace().equals("debug"));
+            object.entrySet().removeIf(entry -> entry.getKey().getNamespace().equals("debug"));
         }
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : object.entrySet()) {
