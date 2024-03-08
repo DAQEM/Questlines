@@ -4,6 +4,7 @@ import com.daqem.arc.Arc;
 import com.daqem.arc.api.action.IAction;
 import com.daqem.arc.api.action.type.IActionType;
 import com.daqem.questlines.Questlines;
+import com.daqem.questlines.config.QuestlinesConfig;
 import com.daqem.questlines.questline.Questline;
 import com.daqem.questlines.questline.quest.Quest;
 import com.google.common.collect.ImmutableMap;
@@ -36,6 +37,10 @@ public class QuestlineManager extends SimpleJsonResourceReloadListener {
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> object, ResourceManager resourceManager, ProfilerFiller profilerFiller) {
         Map<ResourceLocation, Questline> tempQuestlines = new HashMap<>();
+
+        if (!QuestlinesConfig.isDebug.get()) {
+            object.entrySet().removeIf(entry -> !entry.getKey().getNamespace().equals("debug"));
+        }
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : object.entrySet()) {
             ResourceLocation location = entry.getKey();
