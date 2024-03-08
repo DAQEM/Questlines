@@ -138,7 +138,7 @@ public abstract class MixinServerPlayer extends Player implements QuestlinesServ
             objectiveProgress.addProgress(amount);
             boolean hasCompleted = objectiveProgress.getProgress() == objective.getGoal();
             if (!hadCompleted && hasCompleted) {
-                questlines1_20_1$broadcastCompletionMessage();
+                questlines1_20_1$broadcastCompletionMessage(objectiveProgress);
                 questlines1_20_1$findCompletedQuest(objectiveProgress).ifPresent(progress ->
                         questlines1_20_1$processCompletedQuest(progress, actionData));
             }
