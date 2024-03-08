@@ -2,6 +2,7 @@ package com.daqem.questlines.data;
 
 import com.daqem.arc.api.action.holder.ActionHolderManager;
 import com.daqem.questlines.Questlines;
+import com.daqem.questlines.config.QuestlinesConfig;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
 import com.daqem.questlines.questline.Questline;
 import com.daqem.questlines.questline.quest.Quest;
@@ -37,6 +38,10 @@ public class QuestManager extends SimpleJsonResourceReloadListener {
     protected void apply(Map<ResourceLocation, JsonElement> object, ResourceManager resourceManager, ProfilerFiller profilerFiller) {
         ActionHolderManager.getInstance().clearActionHolders(QuestlinesActionHolderType.OBJECTIVE);
         Map<ResourceLocation, Quest> tempQuests = new HashMap<>();
+
+        if (!QuestlinesConfig.isDebug.get()) {
+            object.entrySet().removeIf(entry -> !entry.getKey().getNamespace().equals("debug"));
+        }
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : object.entrySet()) {
             ResourceLocation location = entry.getKey();

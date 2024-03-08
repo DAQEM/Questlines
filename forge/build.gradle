@@ -148,6 +148,7 @@ modrinth {
     changelog = rootProject.file('changelog.md').text
     dependencies {
         required.project "architectury-api"
+        required.project "supermartijn642s-config-lib"
         required.project "ui-lib"
         required.project "arc"
     }
