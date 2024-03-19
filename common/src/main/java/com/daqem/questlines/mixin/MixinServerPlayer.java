@@ -1,7 +1,6 @@
 package com.daqem.questlines.mixin;
 
 import com.daqem.arc.api.action.data.ActionData;
-import com.daqem.arc.api.action.data.IActionData;
 import com.daqem.arc.api.action.holder.IActionHolder;
 import com.daqem.arc.api.player.ArcServerPlayer;
 import com.daqem.questlines.Questlines;
@@ -16,6 +15,7 @@ import com.daqem.questlines.questline.quest.objective.ObjectiveProgress;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -47,6 +47,9 @@ public abstract class MixinServerPlayer extends Player implements QuestlinesServ
 
     @Shadow
     public ServerGamePacketListenerImpl connection;
+
+    @Shadow public abstract void sendSystemMessage(Component arg, boolean bl);
+
     @Unique
     private static final String QUESTLINES_TAG = "Questlines";
 
@@ -148,11 +151,9 @@ public abstract class MixinServerPlayer extends Player implements QuestlinesServ
 
     @Unique
     private void questlines1_20_1$broadcastCompletionMessage(ObjectiveProgress objectiveProgress) {
-        questlines1_20_1$getServer().ifPresent(server -> {
-            server.getPlayerList().broadcastSystemMessage(
-                    Questlines.literal("You completed the objective: " +  objectiveProgress.getObjective().getDescription(objectiveProgress).getString()), false
-            );
-        });
+        sendSystemMessage(
+                Questlines.literal("You completed the objective: " +  objectiveProgress.getObjective().getName(objectiveProgress).getString()), false
+        );
     }
 
     @Unique

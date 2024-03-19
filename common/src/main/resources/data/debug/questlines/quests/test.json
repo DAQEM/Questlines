@@ -1,16 +1,24 @@
 {
   "questline": "debug:test",
+  "icon": {
+    "item": "minecraft:stone"
+  },
+  "name": "Test Quest",
+  "description": "This is a test quest",
   "objectives": [
     {
       "id": "test",
+      "name": "Break 1 block of grass.",
       "goal": 1
     },
     {
       "id": "test2",
+      "name": "Break 3 blocks of dirt.",
       "goal": 3
     },
     {
       "id": "test3",
+        "name": "Throw 5 eggs.",
       "goal": 5
     }
   ],

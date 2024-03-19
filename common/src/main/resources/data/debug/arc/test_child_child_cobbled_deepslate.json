@@ -1,0 +1,18 @@
+{
+  "holder": {
+    "type": "questlines:objective",
+    "id": "debug:test_child_child/test"
+  },
+  "type": "arc:on_break_block",
+  "conditions": [
+    {
+      "type": "arc:block",
+      "block": "minecraft:cobbled_deepslate"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "questlines:objective_occurrence"
+    }
+  ]
+}

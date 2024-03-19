@@ -1,9 +1,15 @@
 {
   "questline": "debug:test",
   "parent": "debug:test_child",
+  "icon": {
+    "item": "minecraft:cobbled_deepslate"
+  },
+  "name": "Test Quest 3",
+  "description": "This is a test quest 3",
   "objectives": [
     {
       "id": "test",
+      "name": "Break 1 block of cobbled deepslate",
       "goal": 1
     }
   ]

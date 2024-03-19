@@ -65,7 +65,7 @@ public class QuestProgress implements ISerializable<QuestProgress>, IAdvancement
 
     @Override
     public ItemStack getIcon() {
-        return Items.ACACIA_LEAVES.getDefaultInstance();
+        return quest.getIcon();
     }
 
     @Override
