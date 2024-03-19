@@ -1,9 +1,15 @@
 {
   "questline": "debug:test",
   "parent": "debug:test",
+  "icon": {
+    "item": "minecraft:cobblestone"
+  },
+  "name": "Test Quest 2",
+  "description": "This is a test quest 2",
   "objectives": [
     {
       "id": "test",
+      "name": "Break 3 blocks of cobblestone.",
       "goal": 3
     }
   ]

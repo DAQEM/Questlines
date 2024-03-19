@@ -103,7 +103,7 @@ public class QuestlineProgress implements ISerializable<QuestlineProgress>, IAdv
 
     @Override
     public ItemStack getIcon() {
-        return Items.ACACIA_PLANKS.getDefaultInstance();
+        return questline.getIcon();
     }
 
     @Override

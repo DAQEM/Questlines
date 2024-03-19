@@ -65,8 +65,8 @@ public class ObjectiveProgress implements ISerializable<ObjectiveProgress> {
         return progress >= objective.getGoal();
     }
 
-    public Component getDescription() {
-        return objective.getDescription(this);
+    public Component getName() {
+        return objective.getName(this);
     }
 
     public static class Serializer implements ISerializer<ObjectiveProgress> {
