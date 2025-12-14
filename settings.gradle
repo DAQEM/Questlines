@@ -9,6 +9,10 @@ pluginManagement {
 
 include("common")
 include("fabric")
-include("forge")
+include("neoforge")
 
-rootProject.name = "Questlines 1.20.1"
+include("testmod-common")
+include("testmod-fabric")
+include("testmod-neoforge")
+
+rootProject.name = "Questlines 1.21.9"

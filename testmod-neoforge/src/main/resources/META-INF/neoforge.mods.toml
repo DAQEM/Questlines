@@ -1,0 +1,13 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "Apache-2.0"
+
+[[mods]]
+modId = "questlines_test"
+version = "${file.jarVersion}"
+displayName = "Questlines Test Mod"
+authors = "DAQEM"
+description = '''
+This is a test mod for Questlines.
+'''
+license = "Apache-2.0"

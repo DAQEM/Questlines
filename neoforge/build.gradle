@@ -4,13 +4,13 @@ plugins {
     id "com.modrinth.minotaur" version "2.+"
 }
 
-architectury {
-    platformSetupLoomIde()
-    fabric()
-}
-
 loom {
     accessWidenerPath = project(":common").loom.accessWidenerPath
+}
+
+architectury {
+    platformSetupLoomIde()
+    neoForge()
 }
 
 configurations {
@@ -20,7 +20,7 @@ configurations {
     }
     compileClasspath.extendsFrom common
     runtimeClasspath.extendsFrom common
-    developmentFabric.extendsFrom common
+    developmentNeoForge.extendsFrom common
 
     // Files in this configuration will be bundled into your mod using the Shadow plugin.
     // Don't use the `shadow` configuration from the plugin itself as it's meant for excluding files.
@@ -30,18 +30,23 @@ configurations {
     }
 }
 
+repositories {
+    maven {
+        name = 'NeoForged'
+        url = 'https://maven.neoforged.net/releases'
+    }
+}
+
 dependencies {
-    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-    modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
-    modApi "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
+    neoForge "net.neoforged:neoforge:${project.neoforge_version}"
+    modApi "dev.architectury:architectury-neoforge:${rootProject.architectury_version}"
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
-    shadowBundle project(path: ":common", configuration: "transformProductionFabric")
+    shadowBundle project(path: ':common', configuration: 'transformProductionNeoForge')
 
-    modImplementation "com.daqem.yamlconfig:yamlconfig-fabric:${project.config_library_version}"
-    modImplementation "com.daqem.uilib:uilib-fabric:${project.ui_library_version}"
-    modImplementation "com.daqem.arc:arc-fabric:${project.arc_version}"
-
+    modImplementation "com.daqem.yamlconfig:yamlconfig-neoforge:${project.config_library_version}"
+    modImplementation "com.daqem.uilib:uilib-neoforge:${project.ui_library_version}"
+    modImplementation "com.daqem.arc:arc-neoforge:${project.arc_version}"
 }
 
 processResources {
@@ -52,18 +57,17 @@ processResources {
             "mod_description": project.mod_description,
             "mod_author": project.mod_author,
             "mod_license": project.mod_license,
-            "mod_website": project.mod_website,
             "mod_repository": project.mod_repository,
 
-            "fabric_loader_version": project.fabric_loader_version,
-            "fabric_api_version": project.fabric_api_version,
+            "neoforge_loader_version": project.neoforge_loader_version,
+            "neoforge_version": project.neoforge_version,
             "minecraft_version": project.minecraft_version,
             "architectury_version": project.architectury_version,
             "config_library_version": project.config_library_version
     ]
     inputs.properties replaceProperties
 
-    filesMatching(['fabric.mod.json']) {
+    filesMatching(['META-INF/neoforge.mods.toml']) {
         expand replaceProperties
     }
 }
@@ -72,13 +76,12 @@ shadowJar {
     exclude "architectury.common.json"
 
     configurations = [project.configurations.shadowBundle]
-    archiveClassifier = "fabric-dev-shadow"
+    archiveClassifier = "neoforge-dev-shadow"
 }
 
 remapJar {
-    injectAccessWidener = true
-    input.set shadowJar.archiveFile
-    dependsOn shadowJar
+    inputFile.set shadowJar.archiveFile
+    atAccessWideners.add loom.accessWidenerPath.get().asFile.name
     archiveClassifier = null
 }
 
@@ -90,7 +93,6 @@ task renameJarForPublication(type: Zip, dependsOn: remapJar) {
     archiveClassifier = project.name
 }
 
-
 assemble.dependsOn renameJarForPublication
 
 sourcesJar {
@@ -100,7 +102,7 @@ sourcesJar {
 }
 
 remapSourcesJar {
-    archiveClassifier = "fabric-sources"
+    archiveClassifier = "neoforge-sources"
 }
 
 components.java {
@@ -111,9 +113,9 @@ components.java {
 
 publishing {
     publications {
-        mavenFabric(MavenPublication) {
+        mavenNeoForge(MavenPublication) {
             groupId = rootProject.maven_group
-            artifactId = rootProject.archives_base_name + "-fabric"
+            artifactId = rootProject.archives_base_name + "-neoforge"
             from components.java
         }
     }
@@ -142,7 +144,7 @@ curseforge {
         }
 
         addGameVersion "Java 21"
-        addGameVersion "Fabric"
+        addGameVersion "NeoForge"
 
         relations {
             project.curseforge_dependencies.split(',').each { dep ->
@@ -151,7 +153,7 @@ curseforge {
         }
 
         mainArtifact(remapJar) {
-            displayName = "$project.mod_name Fabric - $project.mod_version"
+            displayName = "$project.mod_name NeoForge - $project.mod_version"
         }
 
         addArtifact(remapSourcesJar) {
@@ -162,13 +164,13 @@ curseforge {
 modrinth {
     token = System.getenv("MODRINTH_API_KEY")
     projectId = project.modrinth_project_id
-    versionName = "$project.mod_name Fabric - $project.mod_version"
+    versionName = "$project.mod_name NeoForge - $project.mod_version"
     versionNumber = "$project.mod_version"
     versionType = "$project.release_type"
     uploadFile = remapJar
     additionalFiles = [remapSourcesJar]
     gameVersions = project.supported_minecraft_versions.split(',').toList()
-    loaders = ["fabric"]
+    loaders = ["neoforge"]
     changelog = rootProject.file('changelog.md').text
     dependencies {
         project.modrinth_dependencies.split(',').each { dep ->

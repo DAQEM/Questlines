@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "questlines_test",
+  "version": "${version}",
+  "name": "Questlines Test Mod",
+  "description": "A test mod for Questlines.",
+  "authors": [
+    "DAQEM"
+  ],
+  "license": "Apache-2.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.daqem.questlines.test.TestMod::init"
+    ]
+  }
+}
