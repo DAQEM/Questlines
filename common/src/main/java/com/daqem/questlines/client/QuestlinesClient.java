@@ -1,5 +1,6 @@
 package com.daqem.questlines.client;
 
+import com.daqem.questlines.Questlines;
 import com.daqem.questlines.client.event.KeyPressedEvent;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
@@ -7,7 +8,7 @@ import org.lwjgl.glfw.GLFW;
 
 public class QuestlinesClient {
 
-    private static final String QUESTLINES_CATEGORY = "key.categories.questlines";
+    private static final KeyMapping.Category QUESTLINES_CATEGORY = new KeyMapping.Category(Questlines.getId("category"));
     public static final KeyMapping OPEN_QUEST_SCREEN = new KeyMapping("key.challenges.open_quest_screen", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, QUESTLINES_CATEGORY);
 
     public static void init() {

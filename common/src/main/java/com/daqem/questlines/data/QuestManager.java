@@ -1,70 +1,127 @@
 package com.daqem.questlines.data;
 
-import com.daqem.arc.api.action.holder.ActionHolderManager;
 import com.daqem.questlines.Questlines;
-import com.daqem.questlines.config.QuestlinesConfig;
-import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
 import com.daqem.questlines.questline.Questline;
 import com.daqem.questlines.questline.quest.Quest;
 import com.daqem.questlines.questline.quest.QuestProgress;
 import com.daqem.questlines.questline.quest.objective.Objective;
+import com.daqem.yamlconfig.YamlConfigExpectPlatform;
 import com.google.common.collect.ImmutableMap;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.mojang.logging.LogUtils;
+import com.google.gson.*;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.util.profiling.ProfilerFiller;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
+import java.io.BufferedReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-public class QuestManager extends SimpleJsonResourceReloadListener {
+public class QuestManager extends SimplePreparableReloadListener<List<Quest>> {
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeHierarchyAdapter(Quest.class, new Quest.Serializer())
             .create();
-    public static final Logger LOGGER = LogUtils.getLogger();
+
+    private static QuestManager instance;
     private ImmutableMap<ResourceLocation, Quest> quests = ImmutableMap.of();
 
     public QuestManager() {
-        super(GSON, "questlines/quests");
+        instance = this;
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> object, ResourceManager resourceManager, ProfilerFiller profilerFiller) {
-        ActionHolderManager.getInstance().clearActionHolders(QuestlinesActionHolderType.OBJECTIVE);
-        Map<ResourceLocation, Quest> tempQuests = new HashMap<>();
+    protected @NotNull List<Quest> prepare(ResourceManager resourceManager, ProfilerFiller profilerFiller) {
+        Map<ResourceLocation, Resource> resourceMap = resourceManager.listResources("questlines/quests", (resourceLocation) ->
+                        resourceLocation.getPath().endsWith(".json")).entrySet().stream()
+                .collect(Collectors.toMap(entry ->
+                                ResourceLocation.fromNamespaceAndPath(
+                                        entry.getKey().getNamespace(),
+                                        entry.getKey().getPath()
+                                                .substring(0, entry.getKey().getPath().length() - ".json".length())
+                                                .substring("questlines/quests/".length())),
+                        Map.Entry::getValue));
 
-        if (!QuestlinesConfig.isDebug.get()) {
-            object.entrySet().removeIf(entry -> entry.getKey().getNamespace().equals("debug"));
-        }
-
-        for (Map.Entry<ResourceLocation, JsonElement> entry : object.entrySet()) {
+        Map<ResourceLocation, JsonObject> map = new HashMap<>();
+        for (Map.Entry<ResourceLocation, Resource> entry : resourceMap.entrySet()) {
             ResourceLocation location = entry.getKey();
-            JsonElement element = entry.getValue();
-
-            element.getAsJsonObject().addProperty("location", location.toString());
-
             try {
-                Quest quest = GSON.fromJson(element, Quest.class);
-                if (quest != null) {
-                    tempQuests.put(quest.getLocation(), quest);
-                } else {
-                    LOGGER.error("Could not deserialize quest {}", location);
-                }
-            } catch (Exception e) {
-                LOGGER.error("Could not deserialize quest {} because: {}", location, e.getMessage());
-                throw e;
+                JsonObject jsonElement = GsonHelper.parse(entry.getValue().openAsReader());
+                map.put(location, jsonElement);
+            } catch (Exception runtimeException) {
+                Questlines.LOGGER.error("Parsing error loading quest {}", location, runtimeException);
             }
         }
 
-        LOGGER.info("Loaded {} quests", tempQuests.size());
-        quests = ImmutableMap.copyOf(tempQuests);
-        Questlines.getInstance().getQuestlineManager().applyQuests(sortQuests(tempQuests.values().stream().toList()));
+        try {
+            Path configDir = YamlConfigExpectPlatform.getConfigDirectory().resolve(Questlines.MOD_ID).resolve("quests");
+            if (!Files.exists(configDir)) {
+                Files.createDirectories(configDir);
+            }
+            try (Stream<Path> paths = Files.walk(configDir)) {
+                paths.filter(path -> path.toString().endsWith(".json"))
+                        .forEach(path -> {
+                            try (BufferedReader reader = Files.newBufferedReader(path)) {
+                                JsonObject jsonElement = GsonHelper.parse(reader);
+                                String relativePath = configDir.relativize(path).toString();
+                                relativePath = relativePath.replace("\\", "/");
+                                relativePath = relativePath.substring(0, relativePath.length() - ".json".length());
+                                String namespace;
+                                String resourcePath;
+                                int firstSlashIndex = relativePath.indexOf('/');
+                                if (firstSlashIndex > 0) {
+                                    namespace = relativePath.substring(0, firstSlashIndex);
+                                    resourcePath = relativePath.substring(firstSlashIndex + 1);
+                                } else {
+                                    namespace = Questlines.MOD_ID;
+                                    resourcePath = relativePath;
+                                }
+                                ResourceLocation location = ResourceLocation.fromNamespaceAndPath(namespace, resourcePath);
+                                map.put(location, jsonElement);
+                            } catch (Exception e) {
+                                Questlines.LOGGER.error("Parsing error loading quest from config {}", path, e);
+                            }
+                        });
+            }
+        } catch (Exception e) {
+            Questlines.LOGGER.error("Error loading quests from config", e);
+        }
+
+        List<Quest> quests = new ArrayList<>();
+        for (Map.Entry<ResourceLocation, JsonObject> entry : map.entrySet()) {
+            ResourceLocation location = entry.getKey();
+            JsonObject jsonObject = entry.getValue();
+            jsonObject.addProperty("location", location.toString());
+            try {
+                Quest quest = GSON.fromJson(entry.getValue(), Quest.class);
+                quests.add(quest);
+            } catch (JsonParseException | IllegalArgumentException runtimeException) {
+                Questlines.LOGGER.error("Parsing error loading quest {}", location, runtimeException);
+            }
+        }
+
+        return quests;
+    }
+
+    @Override
+    protected void apply(List<Quest> object, ResourceManager resourceManager, ProfilerFiller profilerFiller) {
+        Questlines.LOGGER.info("Loaded {} quests", object.size());
+        this.quests = object.stream()
+                .collect(ImmutableMap.toImmutableMap(
+                        Quest::getLocation,
+                        quest -> quest
+                ));
+        QuestlineManager.getInstance().applyQuests(sortQuests(quests.values().stream().toList()));
+    }
+
+    public static QuestManager getInstance() {
+        return instance != null ? instance : new QuestManager();
     }
 
     public Optional<Quest> getQuest(ResourceLocation location) {
@@ -93,13 +150,12 @@ public class QuestManager extends SimpleJsonResourceReloadListener {
                 .findFirst();
     }
 
-    public void replaceQuests(List<Quest> quests) {
-        ImmutableMap.Builder<ResourceLocation, Quest> map = ImmutableMap.builder();
-        for (Quest quest : quests) {
-            map.put(quest.getLocation(), quest);
-        }
-        this.quests = map.build();
-        LOGGER.info("Updated {} quests", this.quests.size());
+    public void setQuests(List<Quest> quests) {
+        this.quests = quests.stream()
+                .collect(ImmutableMap.toImmutableMap(
+                        Quest::getLocation,
+                        quest -> quest
+                ));
     }
 
     public List<String> getLocationStrings() {
@@ -143,7 +199,7 @@ public class QuestManager extends SimpleJsonResourceReloadListener {
         }
 
         return quests.stream()
-                .filter(quest -> quest.getQuestParent().isEmpty())
+                .filter(quest -> quest.getQuestParent() == null)
                 .toList();
     }
 }

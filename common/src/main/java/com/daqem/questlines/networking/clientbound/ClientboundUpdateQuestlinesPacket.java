@@ -1,39 +1,47 @@
 package com.daqem.questlines.networking.clientbound;
 
-import com.daqem.questlines.Questlines;
 import com.daqem.questlines.networking.QuestlinesNetworking;
 import com.daqem.questlines.questline.Questline;
-import dev.architectury.networking.NetworkManager;
-import dev.architectury.networking.simple.BaseS2CMessage;
-import dev.architectury.networking.simple.MessageType;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public class ClientboundUpdateQuestlinesPacket extends BaseS2CMessage {
+public class ClientboundUpdateQuestlinesPacket implements CustomPacketPayload {
 
     public List<Questline> questlines;
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, ClientboundUpdateQuestlinesPacket> STREAM_CODEC = new StreamCodec<>() {
+        @Override
+        public @NotNull ClientboundUpdateQuestlinesPacket decode(RegistryFriendlyByteBuf buf) {
+            return new ClientboundUpdateQuestlinesPacket(buf);
+        }
+
+        @Override
+        public void encode(RegistryFriendlyByteBuf buf, ClientboundUpdateQuestlinesPacket packet) {
+            buf.writeCollection(packet.questlines, (buf1, questline) ->
+                    questline.getSerializer().toNetwork((RegistryFriendlyByteBuf) buf1, questline));
+        }
+    };
 
     public ClientboundUpdateQuestlinesPacket(List<Questline> questlines) {
         this.questlines = questlines;
     }
 
-    public ClientboundUpdateQuestlinesPacket(FriendlyByteBuf friendlyByteBuf) {
-        this.questlines = friendlyByteBuf.readList(friendlyByteBuf1 -> new Questline.Serializer().fromNetwork(friendlyByteBuf1));
+    public ClientboundUpdateQuestlinesPacket(FriendlyByteBuf buf) {
+        this.questlines = buf.readList(buf1 ->
+                new Questline.Serializer().fromNetwork((RegistryFriendlyByteBuf) buf1));
     }
 
     @Override
-    public MessageType getType() {
+    public @NotNull Type<? extends CustomPacketPayload> type() {
         return QuestlinesNetworking.CLIENTBOUND_UPDATE_QUESTLINES;
     }
 
-    @Override
-    public void write(FriendlyByteBuf buf) {
-        buf.writeCollection(questlines, (friendlyByteBuf1, questline) -> questline.getSerializer().toNetwork(friendlyByteBuf1, questline));
-    }
-
-    @Override
-    public void handle(NetworkManager.PacketContext context) {
-        Questlines.getInstance().getQuestlineManager().replaceQuestlines(questlines);
+    public List<Questline> getQuestlines() {
+        return questlines;
     }
 }

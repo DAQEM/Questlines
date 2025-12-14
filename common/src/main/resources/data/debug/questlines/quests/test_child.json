@@ -2,7 +2,7 @@
   "questline": "debug:test",
   "parent": "debug:test",
   "icon": {
-    "item": "minecraft:cobblestone"
+    "id": "minecraft:cobblestone"
   },
   "name": "Test Quest 2",
   "description": "This is a test quest 2",

@@ -1,13 +1,15 @@
 package com.daqem.questlines.questline.quest.objective;
 
 import com.daqem.questlines.Questlines;
+import com.daqem.questlines.data.QuestManager;
 import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -15,6 +17,12 @@ import java.lang.reflect.Type;
 
 public class ObjectiveProgress implements ISerializable<ObjectiveProgress> {
 
+    public static final Codec<ObjectiveProgress> CODEC = RecordCodecBuilder.create(instance ->
+            instance.group(
+                    ResourceLocation.CODEC.fieldOf("objective").forGetter(op -> op.objective.getLocation()),
+                    Codec.INT.fieldOf("progress").forGetter(ObjectiveProgress::getProgress)
+            ).apply(instance, ObjectiveProgress::new)
+    );
     private final Objective objective;
     private int progress;
 
@@ -24,6 +32,11 @@ public class ObjectiveProgress implements ISerializable<ObjectiveProgress> {
 
     public ObjectiveProgress(Objective objective, int progress) {
         this.objective = objective;
+        this.progress = progress;
+    }
+
+    public ObjectiveProgress(ResourceLocation resourceLocation, int progress) {
+        this.objective = QuestManager.getInstance().getObjective(resourceLocation).orElse(null);
         this.progress = progress;
     }
 
@@ -77,36 +90,16 @@ public class ObjectiveProgress implements ISerializable<ObjectiveProgress> {
         }
 
         @Override
-        public ObjectiveProgress fromNetwork(FriendlyByteBuf friendlyByteBuf) {
+        public ObjectiveProgress fromNetwork(RegistryFriendlyByteBuf friendlyByteBuf) {
             int progress = friendlyByteBuf.readInt();
-            Objective objective = Questlines.getInstance().getQuestManager().getObjective(friendlyByteBuf.readResourceLocation()).orElse(null);
+            Objective objective = QuestManager.getInstance().getObjective(friendlyByteBuf.readResourceLocation()).orElse(null);
             return new ObjectiveProgress(objective, progress);
         }
 
         @Override
-        public void toNetwork(FriendlyByteBuf friendlyByteBuf, ObjectiveProgress type) {
+        public void toNetwork(RegistryFriendlyByteBuf friendlyByteBuf, ObjectiveProgress type) {
             friendlyByteBuf.writeInt(type.getProgress());
             friendlyByteBuf.writeResourceLocation(type.getObjective().getLocation());
-        }
-
-        private static final String PROGRESS = "Progress";
-
-        @Override
-        public ObjectiveProgress fromNBT(CompoundTag compoundTag, ResourceLocation location) {
-            Objective objective = Questlines.getInstance().getQuestManager().getObjective(location).orElse(null);
-            if (objective == null) {
-                return null;
-            }
-
-            int progress = compoundTag.getInt(PROGRESS);
-            return new ObjectiveProgress(objective, progress);
-        }
-
-        @Override
-        public CompoundTag toNBT(ObjectiveProgress type) {
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putInt(PROGRESS, type.progress);
-            return compoundTag;
         }
     }
 }

@@ -1,84 +1,90 @@
 package com.daqem.questlines.questline.quest;
 
-import com.daqem.questlines.Questlines;
+import com.daqem.questlines.client.gui.widget.QuestWidget;
+import com.daqem.questlines.data.QuestManager;
 import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.questline.quest.objective.ObjectiveProgress;
-import com.daqem.uilib.api.client.gui.component.advancement.IAdvancement;
+import com.daqem.uilib.api.skilltree.ISkillTreeItem;
+import com.daqem.uilib.api.widget.skilltree.ISkillTreeItemWidget;
+import com.daqem.uilib.skilltree.AbstractSkillTreeItem;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
-import net.minecraft.advancements.FrameType;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.advancements.AdvancementType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
-public class QuestProgress implements ISerializable<QuestProgress>, IAdvancement {
+public class QuestProgress extends AbstractSkillTreeItem implements ISerializable<QuestProgress> {
 
-    private @Nullable QuestProgress parent;
-    private final List<QuestProgress> children = new ArrayList<>();
-
+    public static final Codec<QuestProgress> CODEC = RecordCodecBuilder.create(instance ->
+            instance.group(
+                    ResourceLocation.CODEC.fieldOf("quest").forGetter(qp -> qp.quest.getLocation()),
+                    ObjectiveProgress.CODEC.listOf().fieldOf("objectives").forGetter(QuestProgress::getObjectives)
+            ).apply(instance, QuestProgress::new
+            )
+    );
     private final Quest quest;
     private final List<ObjectiveProgress> objectives;
 
     public QuestProgress(Quest quest, List<ObjectiveProgress> objectives) {
+        super(quest.getParentLocation() == null, new ArrayList<>());
         this.quest = quest;
         this.objectives = objectives;
     }
 
-    public Optional<IAdvancement> getParent() {
-        return Optional.ofNullable(parent);
+    public QuestProgress(ResourceLocation resourceLocation, List<ObjectiveProgress> objectives) {
+        super(resourceLocation == null, new ArrayList<>());
+        this.quest = QuestManager.getInstance().getQuest(resourceLocation).orElse(null);
+        this.objectives = objectives;
     }
 
-    public Optional<QuestProgress> getQuestParent() {
-        return Optional.ofNullable(parent);
+    @Override
+    public ISkillTreeItemWidget createWidget() {
+        return new QuestWidget(this);
     }
 
-    public void setParent(@Nullable QuestProgress parent) {
-        this.parent = parent;
-    }
-
-    public List<IAdvancement> getChildren() {
-        return new ArrayList<>(children);
+    public QuestProgress getQuestParent() {
+        return (QuestProgress) getParent();
     }
 
     public List<QuestProgress> getQuestChildren() {
-        return new ArrayList<>(children);
-    }
-
-    @Override
-    public void addChild(IAdvancement advancement) {
-        if (advancement instanceof QuestProgress && !children.contains(advancement)) {
-            children.add((QuestProgress) advancement);
+        // Cast the raw ISkillTreeItem list to QuestProgress list
+        List<QuestProgress> questChildren = new ArrayList<>();
+        for (ISkillTreeItem child : getChildren()) {
+            if (child instanceof QuestProgress qp) {
+                questChildren.add(qp);
+            }
         }
+        return questChildren;
     }
 
-    @Override
+    public void addChild(QuestProgress child) {
+        super.addChild(child);
+    }
+
     public ItemStack getIcon() {
         return quest.getIcon();
     }
 
-    @Override
     public Component getName() {
         return quest.getName();
     }
 
-    @Override
     public List<Component> getDescription() {
         return quest.getDescription(this);
     }
 
-    @Override
     public boolean isObtained() {
         return getObjectives().stream().allMatch(ObjectiveProgress::isCompleted);
     }
@@ -87,13 +93,8 @@ public class QuestProgress implements ISerializable<QuestProgress>, IAdvancement
         return isObtained();
     }
 
-    @Override
-    public FrameType getFrameType() {
-        return FrameType.CHALLENGE;
-    }
-
-    public void addChild(QuestProgress child) {
-        children.add(child);
+    public AdvancementType getFrameType() {
+        return AdvancementType.CHALLENGE;
     }
 
     public Quest getQuest() {
@@ -117,12 +118,12 @@ public class QuestProgress implements ISerializable<QuestProgress>, IAdvancement
         }
 
         @Override
-        public QuestProgress fromNetwork(FriendlyByteBuf friendlyByteBuf) {
-            Quest quest = Questlines.getInstance().getQuestManager().getQuest(friendlyByteBuf.readResourceLocation()).orElse(null);
-            List<ObjectiveProgress> objectives = friendlyByteBuf.readList(friendlyByteBuf1 ->
-                    new ObjectiveProgress.Serializer().fromNetwork(friendlyByteBuf1));
-            List<QuestProgress> questChildren = friendlyByteBuf.readList(friendlyByteBuf1 ->
-                    new QuestProgress.Serializer().fromNetwork(friendlyByteBuf1));
+        public QuestProgress fromNetwork(RegistryFriendlyByteBuf buf) {
+            Quest quest = QuestManager.getInstance().getQuest(buf.readResourceLocation()).orElse(null);
+            List<ObjectiveProgress> objectives = buf.readList(buf1 ->
+                    new ObjectiveProgress.Serializer().fromNetwork((RegistryFriendlyByteBuf) buf1));
+            List<QuestProgress> questChildren = buf.readList(buf1 ->
+                    new QuestProgress.Serializer().fromNetwork((RegistryFriendlyByteBuf) buf1));
 
             QuestProgress questProgress = new QuestProgress(quest, objectives);
 
@@ -134,51 +135,12 @@ public class QuestProgress implements ISerializable<QuestProgress>, IAdvancement
         }
 
         @Override
-        public void toNetwork(FriendlyByteBuf friendlyByteBuf, QuestProgress type) {
-            friendlyByteBuf.writeResourceLocation(type.getQuest().getLocation());
-            friendlyByteBuf.writeCollection(type.getObjectives(), (friendlyByteBuf1, objectiveProgress) ->
-                    objectiveProgress.getSerializer().toNetwork(friendlyByteBuf1, objectiveProgress));
-            friendlyByteBuf.writeCollection(type.getQuestChildren(), (friendlyByteBuf1, questProgress) ->
-                    questProgress.getSerializer().toNetwork(friendlyByteBuf1, questProgress));
-        }
-
-        private static final String OBJECTIVES_TAG = "Objectives";
-
-        @Override
-        public QuestProgress fromNBT(CompoundTag compoundTag, ResourceLocation location) {
-            Quest quest = Questlines.getInstance().getQuestManager().getQuest(location).orElse(null);
-            if (quest == null) {
-                return null;
-            }
-
-            ObjectiveProgress.Serializer serializer = new ObjectiveProgress.Serializer();
-            List<ObjectiveProgress> objectives = new ArrayList<>();
-            CompoundTag objectivesTag = compoundTag.getCompound(OBJECTIVES_TAG);
-            for (String key : objectivesTag.getAllKeys()) {
-                ObjectiveProgress objectiveProgress = serializer.fromNBT(
-                        objectivesTag.getCompound(key),
-                        new ResourceLocation(key));
-
-                if (objectiveProgress != null) {
-                    objectives.add(objectiveProgress);
-                }
-            }
-
-            return new QuestProgress(quest, objectives);
-        }
-
-        @Override
-        public CompoundTag toNBT(QuestProgress type) {
-            CompoundTag tag = new CompoundTag();
-            CompoundTag objectivesTag = new CompoundTag();
-            for (ObjectiveProgress objectiveProgress : type.objectives) {
-                objectivesTag.put(
-                        objectiveProgress.getObjective().getLocation().toString(),
-                        objectiveProgress.getSerializer().toNBT(objectiveProgress)
-                );
-            }
-            tag.put(OBJECTIVES_TAG, objectivesTag);
-            return tag;
+        public void toNetwork(RegistryFriendlyByteBuf buf, QuestProgress type) {
+            buf.writeResourceLocation(type.getQuest().getLocation());
+            buf.writeCollection(type.getObjectives(), (buf1, objectiveProgress) ->
+                    objectiveProgress.getSerializer().toNetwork((RegistryFriendlyByteBuf) buf1, objectiveProgress));
+            buf.writeCollection(type.getQuestChildren(), (buf1, questProgress) ->
+                    questProgress.getSerializer().toNetwork((RegistryFriendlyByteBuf) buf1, questProgress));
         }
     }
 }

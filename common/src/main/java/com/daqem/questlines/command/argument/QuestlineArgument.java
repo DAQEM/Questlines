@@ -1,7 +1,7 @@
 package com.daqem.questlines.command.argument;
 
-import com.daqem.arc.api.action.IAction;
 import com.daqem.questlines.Questlines;
+import com.daqem.questlines.data.QuestlineManager;
 import com.daqem.questlines.questline.Questline;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
@@ -22,7 +22,7 @@ public class QuestlineArgument implements ArgumentType<Questline> {
 
     @Override
     public Questline parse(StringReader reader) throws CommandSyntaxException {
-        return Questlines.getInstance().getQuestlineManager().getQuestline(ResourceLocation.read(reader)).orElseThrow(() -> {
+        return QuestlineManager.getInstance().getQuestline(ResourceLocation.read(reader)).orElseThrow(() -> {
             reader.setCursor(reader.getRemainingLength());
             return new CommandSyntaxException(null, Questlines.literal("Unknown questline location: " + reader.getString()), reader.getString(), reader.getCursor());
         });
@@ -30,7 +30,7 @@ public class QuestlineArgument implements ArgumentType<Questline> {
 
     @Override
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(Questlines.getInstance().getQuestlineManager().getLocationStrings(), builder);
+        return SharedSuggestionProvider.suggest(QuestlineManager.getInstance().getLocationStrings(), builder);
     }
 
     public static Questline getQuestline(CommandContext<?> context, String name) {

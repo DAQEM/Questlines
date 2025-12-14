@@ -1,5 +1,6 @@
 package com.daqem.questlines.questline;
 
+import com.daqem.arc.data.serializer.ArcSerializer;
 import com.daqem.questlines.Questlines;
 import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
@@ -7,6 +8,7 @@ import com.daqem.questlines.questline.quest.Quest;
 import com.google.gson.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
@@ -88,53 +90,35 @@ public class Questline implements ISerializable<Questline> {
         @Override
         public Questline deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
             JsonObject jsonObject = jsonElement.getAsJsonObject();
-
-            JsonObject iconObject = jsonObject.getAsJsonObject("icon");
-            ItemStack icon = iconObject != null ? getItemStack(iconObject,"item") : ItemStack.EMPTY;
-            CompoundTag nbt = iconObject != null ? getCompoundTag(iconObject) : null;
-            if (nbt != null) {
-                icon.setTag(nbt);
-            }
-
             return new Questline(
                     getResourceLocation(jsonObject, "location"),
                     GsonHelper.getAsString(jsonObject, "name", null),
-                    icon,
+                    getItemStack(jsonObject, "icon", ItemStack.EMPTY),
                     GsonHelper.getAsBoolean(jsonObject, "isUnlockedByDefault", true)
             );
         }
 
         @Override
-        public Questline fromNetwork(FriendlyByteBuf friendlyByteBuf) {
-            ResourceLocation location = friendlyByteBuf.readResourceLocation();
-            boolean hasName = friendlyByteBuf.readBoolean();
-            String name = hasName ? friendlyByteBuf.readUtf() : null;
-            ItemStack icon = friendlyByteBuf.readItem();
-            boolean isUnlockedByDefault = friendlyByteBuf.readBoolean();
+        public Questline fromNetwork(RegistryFriendlyByteBuf buf) {
+            ResourceLocation location = buf.readResourceLocation();
+            boolean hasName = buf.readBoolean();
+            String name = hasName ? buf.readUtf() : null;
+            ItemStack icon = ItemStack.STREAM_CODEC.decode(buf);
+            boolean isUnlockedByDefault = buf.readBoolean();
 
             return new Questline(location, name, icon, isUnlockedByDefault);
         }
 
         @Override
-        public void toNetwork(FriendlyByteBuf friendlyByteBuf, Questline type) {
-            friendlyByteBuf.writeResourceLocation(type.getLocation());
-            boolean hasName = type.name != null;
-            friendlyByteBuf.writeBoolean(hasName);
+        public void toNetwork(RegistryFriendlyByteBuf buf, Questline questline) {
+            buf.writeResourceLocation(questline.getLocation());
+            boolean hasName = questline.name != null;
+            buf.writeBoolean(hasName);
             if (hasName) {
-                friendlyByteBuf.writeUtf(type.name);
+                buf.writeUtf(questline.name);
             }
-            friendlyByteBuf.writeItem(type.icon);
-            friendlyByteBuf.writeBoolean(type.isUnlockedByDefault());
-        }
-
-        @Override
-        public Questline fromNBT(CompoundTag compoundTag, ResourceLocation location) {
-            return null;
-        }
-
-        @Override
-        public CompoundTag toNBT(Questline type) {
-            return null;
+            ItemStack.STREAM_CODEC.encode(buf, questline.getIcon());
+            buf.writeBoolean(questline.isUnlockedByDefault());
         }
     }
 }

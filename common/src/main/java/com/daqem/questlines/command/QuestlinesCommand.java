@@ -16,7 +16,7 @@ public class QuestlinesCommand {
                                 .executes(context -> {
                                     ServerPlayer player = EntityArgument.getPlayer(context, "target");
                                     if (player instanceof QuestlinesServerPlayer serverPlayer) {
-                                        serverPlayer.questlines1_20_1$resetQuestlines();
+                                        serverPlayer.questlines$resetQuestlines();
                                     }
                                     return 1;
                                 })

@@ -7,7 +7,5 @@ import java.util.List;
 
 public interface QuestlinesPlayer {
 
-    Player questlines1_20_1$asPlayer();
-
-    List<QuestlineProgress> questlines1_20_1$getQuestlines();
+    List<QuestlineProgress> questlines$getQuestlines();
 }

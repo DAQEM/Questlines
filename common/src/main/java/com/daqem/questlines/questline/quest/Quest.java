@@ -1,18 +1,17 @@
 package com.daqem.questlines.questline.quest;
 
-import com.daqem.arc.api.action.holder.ActionHolderManager;
+import com.daqem.arc.api.action.holder.IActionHolderSerializer;
 import com.daqem.arc.api.reward.IReward;
-import com.daqem.arc.api.reward.serializer.IRewardSerializer;
+import com.daqem.arc.api.reward.IRewardSerializer;
+import com.daqem.arc.data.ActionHolderManager;
 import com.daqem.arc.registry.ArcRegistry;
 import com.daqem.questlines.Questlines;
-import com.daqem.questlines.data.QuestManager;
 import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.questline.quest.objective.Objective;
 import com.daqem.questlines.questline.quest.objective.ObjectiveProgress;
 import com.google.gson.*;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
@@ -133,13 +132,6 @@ public class Quest implements ISerializable<Quest> {
             Map<ResourceLocation, Objective> objectives = new HashMap<>();
             List<IReward> rewards = new ArrayList<>();
 
-            JsonObject iconObject = jsonObject.getAsJsonObject("icon");
-            ItemStack icon = iconObject != null ? getItemStack(iconObject,"item") : ItemStack.EMPTY;
-            CompoundTag nbt = iconObject != null ? getCompoundTag(iconObject) : null;
-            if (nbt != null) {
-                icon.setTag(nbt);
-            }
-
             if (jsonObject.has("objectives")) {
                 jsonObject.getAsJsonArray("objectives").forEach(json -> {
                     try {
@@ -147,10 +139,10 @@ public class Quest implements ISerializable<Quest> {
                         Objective objective = GSON.fromJson(json, Objective.class);
                         if (objective != null) {
                             objectives.put(objective.getLocation(), objective);
-                            ActionHolderManager.getInstance().registerActionHolder(objective);
+                            ActionHolderManager.getInstance().registerActionHolders(List.of(objective));
                         }
                     } catch (Exception e) {
-                        QuestManager.LOGGER.error("Could not deserialize objective of {} because: {}", location.toString(), e.getMessage());
+                        Questlines.LOGGER.error("Could not deserialize objective of {} because: {}", location.toString(), e.getMessage());
                     }
                 });
             }
@@ -159,8 +151,8 @@ public class Quest implements ISerializable<Quest> {
             if (jsonObject.has("rewards")) {
                 jsonObject.getAsJsonArray("rewards").forEach(json1 -> {
                     ResourceLocation rewardLocation = getResourceLocation(json1.getAsJsonObject(), "type");
-                    ArcRegistry.REWARD_SERIALIZER.getOptional(rewardLocation).ifPresent(serializer -> {
-                        rewards.add(serializer.fromJson(location, json1.getAsJsonObject()));
+                    ArcRegistry.REWARD.getOptional(rewardLocation).ifPresent(rewardType -> {
+                        rewards.add(rewardType.getSerializer().fromJson(location, json1.getAsJsonObject()));
                     });
                 });
             }
@@ -168,69 +160,59 @@ public class Quest implements ISerializable<Quest> {
             return new Quest(
                     location,
                     getResourceLocation(jsonObject, "questline"),
-                    parentLocation.isEmpty() ? null : new ResourceLocation(parentLocation),
+                    parentLocation.isEmpty() ? null : ResourceLocation.parse(parentLocation),
                     GsonHelper.getAsString(jsonObject, "name", null),
                     GsonHelper.getAsString(jsonObject, "description", null),
-                    icon,
+                    getItemStack(jsonObject, "icon", ItemStack.EMPTY),
                     objectives,
                     rewards
             );
         }
 
         @Override
-        public Quest fromNetwork(FriendlyByteBuf friendlyByteBuf) {
-            ResourceLocation location = friendlyByteBuf.readResourceLocation();
-            ResourceLocation questlineLocation = friendlyByteBuf.readResourceLocation();
-            ResourceLocation parentLocation = friendlyByteBuf.readBoolean() ? friendlyByteBuf.readResourceLocation() : null;
-            boolean hasName = friendlyByteBuf.readBoolean();
-            String name = hasName ? friendlyByteBuf.readUtf() : null;
-            boolean hasDescription = friendlyByteBuf.readBoolean();
-            String description = hasDescription ? friendlyByteBuf.readUtf() : null;
-            ItemStack icon = friendlyByteBuf.readItem();
-            List<Objective> objectives = friendlyByteBuf.readList(new Objective.Serializer()::fromNetwork);
+        public Quest fromNetwork(RegistryFriendlyByteBuf buf) {
+            ResourceLocation location = buf.readResourceLocation();
+            ResourceLocation questlineLocation = buf.readResourceLocation();
+            ResourceLocation parentLocation = buf.readBoolean() ? buf.readResourceLocation() : null;
+            boolean hasName = buf.readBoolean();
+            String name = hasName ? buf.readUtf() : null;
+            boolean hasDescription = buf.readBoolean();
+            String description = hasDescription ? buf.readUtf() : null;
+            ItemStack icon = ItemStack.STREAM_CODEC.decode(buf);
+            List<Objective> objectives = buf.readList(buf1 -> (Objective) IActionHolderSerializer.fromNetwork((RegistryFriendlyByteBuf) buf1));
             Map<ResourceLocation, Objective> objectivesMap = objectives.stream().collect(Collectors.toMap(Objective::getLocation, objective -> objective));
-            List<IReward> rewards = friendlyByteBuf.readList(IRewardSerializer::fromNetwork);
+            List<IReward> rewards = buf.readList(buf1 -> IRewardSerializer.fromNetwork((RegistryFriendlyByteBuf) buf1));
             return new Quest(location, questlineLocation, parentLocation, name, description, icon, objectivesMap, rewards);
         }
 
         @Override
-        public void toNetwork(FriendlyByteBuf friendlyByteBuf, Quest type) {
-            friendlyByteBuf.writeResourceLocation(type.location);
-            friendlyByteBuf.writeResourceLocation(type.questlineLocation);
+        public void toNetwork(RegistryFriendlyByteBuf buf, Quest quest) {
+            buf.writeResourceLocation(quest.location);
+            buf.writeResourceLocation(quest.questlineLocation);
 
-            boolean hasParentLocation = type.parentLocation != null;
-            friendlyByteBuf.writeBoolean(hasParentLocation);
+            boolean hasParentLocation = quest.parentLocation != null;
+            buf.writeBoolean(hasParentLocation);
             if (hasParentLocation) {
-                friendlyByteBuf.writeResourceLocation(type.parentLocation);
+                buf.writeResourceLocation(quest.parentLocation);
             }
 
-            boolean hasName = type.name != null;
-            friendlyByteBuf.writeBoolean(hasName);
+            boolean hasName = quest.name != null;
+            buf.writeBoolean(hasName);
             if (hasName) {
-                friendlyByteBuf.writeUtf(type.name);
+                buf.writeUtf(quest.name);
             }
 
-            boolean hasDescription = type.description != null;
-            friendlyByteBuf.writeBoolean(hasDescription);
+            boolean hasDescription = quest.description != null;
+            buf.writeBoolean(hasDescription);
             if (hasDescription) {
-                friendlyByteBuf.writeUtf(type.description);
+                buf.writeUtf(quest.description);
             }
 
-            friendlyByteBuf.writeItem(type.icon);
-            friendlyByteBuf.writeCollection(type.getObjectives(),
-                    (friendlyByteBuf1, objective) -> new Objective.Serializer().toNetwork(friendlyByteBuf1, objective));
-            friendlyByteBuf.writeCollection(type.getRewards(),
-                    (friendlyByteBuf1, reward) -> IRewardSerializer.toNetwork(reward, friendlyByteBuf1, reward.getType().getLocation()));
-        }
-
-        @Override
-        public Quest fromNBT(CompoundTag compoundTag, ResourceLocation location) {
-            return null;
-        }
-
-        @Override
-        public CompoundTag toNBT(Quest type) {
-            return null;
+            ItemStack.STREAM_CODEC.encode(buf, quest.icon);
+            buf.writeCollection(quest.getObjectives(),
+                    (buf1, objective) -> IActionHolderSerializer.toNetwork(objective, (RegistryFriendlyByteBuf) buf1));
+            buf.writeCollection(quest.getRewards(),
+                    (buf1, reward) -> IRewardSerializer.toNetwork(reward, (RegistryFriendlyByteBuf) buf1, reward.getType().getLocation()));
         }
     }
 }

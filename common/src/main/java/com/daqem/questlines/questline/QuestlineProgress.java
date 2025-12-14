@@ -1,24 +1,26 @@
 package com.daqem.questlines.questline;
 
 import com.daqem.arc.api.action.holder.IActionHolder;
-import com.daqem.questlines.Questlines;
 import com.daqem.questlines.data.QuestManager;
+import com.daqem.questlines.data.QuestlineManager;
 import com.daqem.questlines.data.serializer.ISerializable;
 import com.daqem.questlines.data.serializer.ISerializer;
 import com.daqem.questlines.questline.quest.Quest;
 import com.daqem.questlines.questline.quest.QuestProgress;
 import com.daqem.questlines.questline.quest.objective.ObjectiveProgress;
-import com.daqem.uilib.api.client.gui.component.advancement.IAdvancement;
-import com.daqem.uilib.api.client.gui.component.advancement.IAdvancementTree;
+import com.daqem.uilib.api.skilltree.ISkillTreeItem;
+import com.daqem.uilib.skilltree.AbstractSkillTree;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
@@ -27,22 +29,57 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class QuestlineProgress implements ISerializable<QuestlineProgress>, IAdvancementTree {
+public class QuestlineProgress extends AbstractSkillTree implements ISerializable<QuestlineProgress> {
 
+    public static final Codec<QuestlineProgress> CODEC = RecordCodecBuilder.create(instance ->
+            instance.group(
+                    ResourceLocation.CODEC.fieldOf("questline").forGetter(qlp -> qlp.questline.getLocation()),
+                    QuestProgress.CODEC.listOf().fieldOf("quest_progresses").forGetter(QuestlineProgress::getAllQuestProgresses)
+            ).apply(instance, (questline, questProgresses) -> {
+                QuestProgress startQuestProgress = QuestManager.sortQuestProgresses(questProgresses).stream().findFirst().orElse(null);
+                return new QuestlineProgress(questline, startQuestProgress);
+            }
+
+            )
+    );
     private final Questline questline;
     private @Nullable QuestProgress startQuestProgress;
 
     public QuestlineProgress(Questline questline) {
+        super(new ArrayList<>());
         this.questline = questline;
     }
 
     public QuestlineProgress(Questline questline, @Nullable QuestProgress startQuestProgress) {
+        super(getAllItemsFlat(startQuestProgress));
         this.questline = questline;
         this.startQuestProgress = startQuestProgress;
     }
 
-    public static Optional<QuestlineProgress> findQuestlineProgress(List<QuestlineProgress> questlines1201$questlines, QuestProgress questProgress) {
-        return questlines1201$questlines.stream()
+    public QuestlineProgress(ResourceLocation resourceLocation, @Nullable QuestProgress startQuestProgress) {
+        super(getAllItemsFlat(startQuestProgress));
+        this.questline = QuestlineManager.getInstance().getQuestline(resourceLocation).orElse(null);
+        this.startQuestProgress = startQuestProgress;
+    }
+
+    private static List<ISkillTreeItem> getAllItemsFlat(@Nullable QuestProgress startNode) {
+        if (startNode == null) return new ArrayList<>();
+        List<ISkillTreeItem> items = new ArrayList<>();
+        collectItems(startNode, items);
+        return items;
+    }
+
+    private static void collectItems(QuestProgress node, List<ISkillTreeItem> list) {
+        list.add(node);
+        for (ISkillTreeItem child : node.getChildren()) {
+            if (child instanceof QuestProgress qp) {
+                collectItems(qp, list);
+            }
+        }
+    }
+
+    public static Optional<QuestlineProgress> findQuestlineProgress(List<QuestlineProgress> questlines, QuestProgress questProgress) {
+        return questlines.stream()
                 .filter(questlineProgress -> questlineProgress.getAllQuestProgresses().contains(questProgress))
                 .findFirst();
     }
@@ -76,37 +113,14 @@ public class QuestlineProgress implements ISerializable<QuestlineProgress>, IAdv
         return questProgresses;
     }
 
-    public List<IActionHolder> getAllActionHolders() {
-        return getAllQuestProgresses().stream()
-                .flatMap(questProgress -> questProgress.getObjectives().stream())
-                .map(ObjectiveProgress::getObjective)
-                .collect(Collectors.toList());
-    }
-
     public @Nullable QuestProgress getStartQuestProgress() {
         return startQuestProgress;
     }
 
-    public void setStartQuestProgress(@Nullable QuestProgress startQuestProgress) {
-        this.startQuestProgress = startQuestProgress;
-    }
-
-    @Override
-    public Optional<IAdvancement> getRoot() {
-        return Optional.ofNullable(startQuestProgress);
-    }
-
-    @Override
-    public ResourceLocation getBackgroundTexture() {
-        return new ResourceLocation("textures/gui/advancements/backgrounds/stone.png");
-    }
-
-    @Override
     public ItemStack getIcon() {
         return questline.getIcon();
     }
 
-    @Override
     public Component getName() {
         return this.questline.getName();
     }
@@ -118,75 +132,29 @@ public class QuestlineProgress implements ISerializable<QuestlineProgress>, IAdv
 
     public static class Serializer implements ISerializer<QuestlineProgress> {
 
-
         @Override
         public QuestlineProgress deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
             return null;
         }
 
         @Override
-        public QuestlineProgress fromNetwork(FriendlyByteBuf friendlyByteBuf) {
-            Questline questline = Questlines.getInstance().getQuestlineManager().getQuestline(friendlyByteBuf.readResourceLocation()).orElse(null);
-            boolean hasStartQuestProgress = friendlyByteBuf.readBoolean();
+        public QuestlineProgress fromNetwork(RegistryFriendlyByteBuf buf) {
+            Questline questline = QuestlineManager.getInstance().getQuestline(buf.readResourceLocation()).orElse(null);
+            boolean hasStartQuestProgress = buf.readBoolean();
             QuestProgress startQuestProgress = null;
             if (hasStartQuestProgress) {
-                startQuestProgress = new QuestProgress.Serializer().fromNetwork(friendlyByteBuf);
+                startQuestProgress = new QuestProgress.Serializer().fromNetwork(buf);
             }
             return new QuestlineProgress(questline, startQuestProgress);
         }
 
         @Override
-        public void toNetwork(FriendlyByteBuf friendlyByteBuf, QuestlineProgress type) {
-            friendlyByteBuf.writeResourceLocation(type.getQuestline().getLocation());
-            friendlyByteBuf.writeBoolean(type.getStartQuestProgress() != null);
-            if (type.getStartQuestProgress() != null) {
-                type.getStartQuestProgress().getSerializer().toNetwork(friendlyByteBuf, type.getStartQuestProgress());
+        public void toNetwork(RegistryFriendlyByteBuf buf, QuestlineProgress questlineProgress) {
+            buf.writeResourceLocation(questlineProgress.getQuestline().getLocation());
+            buf.writeBoolean(questlineProgress.getStartQuestProgress() != null);
+            if (questlineProgress.getStartQuestProgress() != null) {
+                questlineProgress.getStartQuestProgress().getSerializer().toNetwork(buf, questlineProgress.getStartQuestProgress());
             }
-        }
-
-        private static final String QUESTS_TAG = "Quests";
-
-        @Override
-        public QuestlineProgress fromNBT(CompoundTag compoundTag, ResourceLocation location) {
-            Optional<Questline> optionalQuestline = Questlines.getInstance().getQuestlineManager().getQuestline(location);
-            if (optionalQuestline.isEmpty())  {
-                return null;
-            }
-            Questline questline = optionalQuestline.get();
-
-            QuestProgress.Serializer serializer = new QuestProgress.Serializer();
-            List<QuestProgress> questProgresses = new ArrayList<>();
-            CompoundTag questsTag = compoundTag.getCompound(QUESTS_TAG);
-            for (String key : questsTag.getAllKeys()) {
-                QuestProgress questProgress = serializer.fromNBT(
-                        questsTag.getCompound(key),
-                        new ResourceLocation(key));
-
-                if (questProgress != null) {
-                    questProgresses.add(questProgress);
-                }
-            }
-
-            questProgresses = QuestManager.sortQuestProgresses(questProgresses);
-
-            return new QuestlineProgress(questline, questProgresses.stream()
-                    .findFirst()
-                    .orElse(null));
-        }
-
-        @Override
-        public CompoundTag toNBT(QuestlineProgress questline) {
-            CompoundTag tag = new CompoundTag();
-            List<QuestProgress> questProgresses = questline.getAllQuestProgresses();
-            CompoundTag questsTag = new CompoundTag();
-            for (QuestProgress questProgress : questProgresses) {
-                questsTag.put(
-                        questProgress.getQuest().getLocation().toString(),
-                        questProgress.getSerializer().toNBT(questProgress)
-                );
-            }
-            tag.put(QUESTS_TAG, questsTag);
-            return tag;
         }
     }
 }

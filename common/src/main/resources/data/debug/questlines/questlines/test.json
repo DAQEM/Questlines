@@ -1,7 +1,18 @@
 {
   "icon": {
-    "item": "minecraft:iron_sword",
-    "tag": "{Unbreakable:1b,Enchantments:[{id:\"minecraft:sharpness\",lvl:5}]}"
+    "id": "minecraft:iron_sword",
+    "components": {
+      "minecraft:display_name": {
+        "value": "§6Sharpness V"
+      },
+      "minecraft:enchantments": [
+        {
+          "id": "minecraft:sharpness",
+          "level": 5
+        }
+      ],
+      "minecraft:unbreakable": {}
+    }
   },
   "name": "Sharpness V",
   "is_unlocked_by_default": true

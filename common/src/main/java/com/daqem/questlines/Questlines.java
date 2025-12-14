@@ -6,40 +6,34 @@ import com.daqem.questlines.data.QuestlineManager;
 import com.daqem.questlines.event.PlayerJoinEvent;
 import com.daqem.questlines.event.RegisterCommandEvent;
 import com.daqem.questlines.integration.arc.action.holder.QuestlinesActionHolderType;
-import com.daqem.questlines.integration.arc.reward.QuestlinesRewardSerializer;
 import com.daqem.questlines.integration.arc.reward.QuestlinesRewardType;
 import com.daqem.questlines.networking.QuestlinesNetworking;
 import com.mojang.logging.LogUtils;
+import dev.architectury.registry.ReloadListenerRegistry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.PackType;
 import org.slf4j.Logger;
 
-public abstract class Questlines {
+public class Questlines {
 
     public static final String MOD_ID = "questlines";
     public static final Logger LOGGER = LogUtils.getLogger();
-    private static Questlines instance = null;
-
-    public Questlines() {
-        if (instance != null) {
-            throw new IllegalStateException("Questlines has already been initialized");
-        }
-        instance = this;
-    }
 
     public static void init() {
-
         QuestlinesConfig.init();
         QuestlinesNetworking.init();
 
         QuestlinesActionHolderType.init();
-        QuestlinesRewardSerializer.init();
         QuestlinesRewardType.init();
 
         registerEvents();
+
+        ReloadListenerRegistry.register(PackType.SERVER_DATA, new QuestlineManager(), getId("questlines"));
+        ReloadListenerRegistry.register(PackType.SERVER_DATA, new QuestManager(), getId("quests"));
     }
 
     private static void registerEvents() {
@@ -47,12 +41,8 @@ public abstract class Questlines {
         RegisterCommandEvent.registerEvent();
     }
 
-    public static Questlines getInstance() {
-        return instance;
-    }
-
     public static ResourceLocation getId(String path) {
-        return new ResourceLocation(MOD_ID, path);
+        return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
     }
 
     public static MutableComponent literal(String str) {
@@ -84,8 +74,4 @@ public abstract class Questlines {
                 literal("] ").withStyle(Style.EMPTY.withColor(QuestlinesConfig.secondaryColor.get()))
         );
     }
-
-    abstract public QuestlineManager getQuestlineManager();
-    abstract public QuestManager getQuestManager();
-
 }

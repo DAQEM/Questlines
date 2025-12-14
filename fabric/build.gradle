@@ -59,7 +59,9 @@ processResources {
             "fabric_api_version": project.fabric_api_version,
             "minecraft_version": project.minecraft_version,
             "architectury_version": project.architectury_version,
-            "config_library_version": project.config_library_version
+            "config_library_version": project.config_library_version,
+            "ui_library_version": project.ui_library_version,
+            "arc_version": project.arc_version
     ]
     inputs.properties replaceProperties
 

@@ -1,6 +1,7 @@
 package com.daqem.questlines.command.argument;
 
 import com.daqem.questlines.Questlines;
+import com.daqem.questlines.data.QuestManager;
 import com.daqem.questlines.questline.quest.objective.Objective;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
@@ -21,7 +22,7 @@ public class ObjectiveArgument implements ArgumentType<Objective> {
 
     @Override
     public Objective parse(StringReader reader) throws CommandSyntaxException {
-        return Questlines.getInstance().getQuestManager().getObjective(ResourceLocation.read(reader)).orElseThrow(() -> {
+        return QuestManager.getInstance().getObjective(ResourceLocation.read(reader)).orElseThrow(() -> {
             reader.setCursor(reader.getRemainingLength());
             return new CommandSyntaxException(null, Questlines.literal("Unknown objective location: " + reader.getString()), reader.getString(), reader.getCursor());
         });
@@ -29,7 +30,7 @@ public class ObjectiveArgument implements ArgumentType<Objective> {
 
     @Override
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(Questlines.getInstance().getQuestManager().getObjectiveLocationStrings(), builder);
+        return SharedSuggestionProvider.suggest(QuestManager.getInstance().getObjectiveLocationStrings(), builder);
     }
 
     public static Objective getObjective(CommandContext<?> context, String name) {

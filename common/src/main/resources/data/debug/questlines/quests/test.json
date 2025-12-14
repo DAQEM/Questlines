@@ -1,7 +1,7 @@
 {
   "questline": "debug:test",
   "icon": {
-    "item": "minecraft:stone"
+    "id": "minecraft:stone"
   },
   "name": "Test Quest",
   "description": "This is a test quest",
